@@ -1,3 +1,5 @@
+// 文件说明：UserController 控制器，负责处理 User 相关的 HTTP 接口请求。
+
 package com.hmdp.controller;
 
 
@@ -20,61 +22,52 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
 
-/**
- * <p>
- * 前端控制器
- * </p>
- *
- * @author 虎哥
- * @since 2021-12-22
- */
 @Slf4j
+// 控制器：负责接收前端请求并直接返回 HTTP 响应
 @RestController
+// 公共路径前缀：/user
 @RequestMapping("/user")
+// 控制器类：负责接收请求、调用业务层并返回结果
 public class UserController {
 
+    // 注入 userService（IUserService）
     @Resource
     private IUserService userService;
 
+    // 注入 userInfoService（IUserInfoService）
     @Resource
     private IUserInfoService userInfoService;
 
+    // 注入 redisTemplate（StringRedisTemplate）
     @Autowired
     private StringRedisTemplate redisTemplate;
 
-    /**
-     * 发送手机验证码
-     */
+    // 发送登录验证码
     @PostMapping("code")
     public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
         return userService.sendCode(phone,session);
     }
 
-    /**
-     * 登录功能
-     * @param loginForm 登录参数，包含手机号、验证码；或者手机号、密码
-     */
+    // 用户登录并返回 token
     @PostMapping("/login")
     public Result login(@RequestBody LoginFormDTO loginForm, HttpSession session){
         return userService.login(loginForm,session);
     }
 
-    /**
-     * 登出功能
-     * @return 无
-     */
+    // 退出登录
     @PostMapping("/logout")
-    public Result logout(){
-        UserHolder.removeUser();
-        return Result.fail("功能未完成");
+    public Result logout(@RequestHeader(value = "authorization", required = false) String token){
+        return userService.logout(token);
     }
 
+    // 返回当前登录用户
     @GetMapping("/me")
     public Result me(){
         UserDTO user = UserHolder.getUser();
         return Result.ok(user);
     }
 
+    // 查询用户详情
     @GetMapping("/info/{id}")
     public Result info(@PathVariable("id") Long userId){
         // 查询详情
@@ -89,6 +82,7 @@ public class UserController {
         return Result.ok(info);
     }
 
+    // 根据 id 查询用户
     @GetMapping("/{id}")
     public Result queryUserById(@PathVariable("id") Long userId){
         //查询详情
@@ -100,19 +94,13 @@ public class UserController {
         return Result.ok(userDTO);
     }
 
-    /**
-     * 签到功能
-     * @return
-     */
+    // 记录当天签到
     @PostMapping("/sign")
     public Result sign(){
         return userService.sign();
     }
 
-    /**
-     * 统计连续签到
-     * @return
-     */
+    // 统计连续签到天数
     @GetMapping("/sign/count")
     public Result signCount(){
         return userService.signCount();

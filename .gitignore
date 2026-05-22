@@ -1,3 +1,5 @@
+# 文件说明：Git 忽略规则文件，告诉 Git 哪些本地文件或目录不需要纳入版本控制。
+
 HELP.md
 target/
 !.mvn/wrapper/maven-wrapper.jar

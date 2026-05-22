@@ -1,3 +1,5 @@
+// 文件说明：Result 数据传输对象，用于接口请求或响应时在前后端之间传递数据。
+
 package com.hmdp.dto;
 
 import lombok.AllArgsConstructor;
@@ -6,13 +8,18 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+// Lombok 注解：自动生成 getter、setter、toString 等常用方法
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Result {
+    // 是否成功
     private Boolean success;
+    // 失败时的错误信息
     private String errorMsg;
+    // 返回给前端的数据
     private Object data;
+    // 分页场景下的总条数
     private Long total;
 
     public static Result ok(){

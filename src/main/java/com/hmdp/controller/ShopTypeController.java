@@ -1,3 +1,5 @@
+// 文件说明：ShopTypeController 控制器，负责处理 Shop Type 相关的 HTTP 接口请求。
+
 package com.hmdp.controller;
 
 
@@ -11,20 +13,17 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.annotation.Resource;
 import java.util.List;
 
-/**
- * <p>
- * 前端控制器
- * </p>
- *
- * @author 虎哥
- * @since 2021-12-22
- */
+// 控制器：负责接收前端请求并直接返回 HTTP 响应
 @RestController
+// 公共路径前缀：/shop-type
 @RequestMapping("/shop-type")
+// 控制器类：负责接收请求、调用业务层并返回结果
 public class ShopTypeController {
+    // 注入 typeService（IShopTypeService）
     @Resource
     private IShopTypeService typeService;
 
+    // 查询商铺分类列表
     @GetMapping("list")
     public Result queryTypeList() {
 //        List<ShopType> typeList = typeService

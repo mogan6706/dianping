@@ -1,32 +1,60 @@
+# 文件说明：Spring Boot 主配置文件，集中配置端口、数据库、Redis、RabbitMQ 和日志级别。
+
+  # server：当前 Spring Boot 应用自己的监听配置。
   server:
+    # port：后端服务端口。
     port: 8081
+  # spring：Spring Boot 组件相关配置。
   spring:
+    # rabbitmq：RabbitMQ 连接配置。
     rabbitmq:
+      # host：RabbitMQ 地址。
       host: localhost
+      # port：RabbitMQ 端口。
       port: 5672
+      # username：RabbitMQ 用户名。
       username: guest
+      # password：RabbitMQ 密码。
       password: guest
     application:
+      # name：应用名。
       name: hmdp
+    # datasource：MySQL 数据源配置。
     datasource:
+      # driver-class-name：JDBC 驱动类。
       driver-class-name: com.mysql.jdbc.Driver
+      # url：数据库连接地址。
       url: jdbc:mysql://127.0.0.1:3306/dingping?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      # username：数据库用户名。
       username: root
+      # password：数据库密码。
       password: 290390
+    # redis：Redis 连接配置。
     redis:
+      # host：Redis 地址。
       host: 127.0.0.1
+      # port：Redis 端口。
       port: 6379
 
       lettuce:
         pool:
+          # max-active：连接池最大活跃连接数。
           max-active: 30
+          # max-idle：连接池最大空闲连接数。
           max-idle: 15
+          # min-idle：连接池最少空闲连接数。
           min-idle: 5
+          # time-between-eviction-runs：空闲连接检查间隔。
           time-between-eviction-runs: 10s
     jackson:
+      # default-property-inclusion：JSON 序列化时忽略 null 字段。
       default-property-inclusion: non_null # JSON处理时忽略非空字段
+  # mybatis-plus：MyBatis-Plus 配置。
   mybatis-plus:
+    # type-aliases-package：实体类别名扫描包。
     type-aliases-package: com.hmdp.entity # 别名扫描包
+  # logging：日志配置。
   logging:
     level:
+      # com.hmdp：项目包日志级别。
       com.hmdp: debug

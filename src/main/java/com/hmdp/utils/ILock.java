@@ -1,15 +1,9 @@
+// 文件说明：分布式锁接口，统一定义加锁和解锁的基本行为。
+
 package com.hmdp.utils;
 
 public interface ILock {
-    /**
-     * 尝试获取锁
-     * @param timeoutSec
-     * @return
-     */
      boolean tryLock(long timeoutSec);
 
-    /**
-     * 释放锁
-     */
     void delLock();
 }

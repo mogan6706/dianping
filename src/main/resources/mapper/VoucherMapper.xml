@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<!-- 文件说明：MyBatis XML 映射文件，补充 Java Mapper 接口里较复杂的优惠券查询 SQL。 -->
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.hmdp.mapper.VoucherMapper">
 

@@ -1,44 +1,68 @@
+# 文件说明：Docker Compose 编排文件，用来一键启动本项目依赖的 MySQL、Redis 和 RabbitMQ 服务。
+
 services:
+  # mysql：MySQL 容器配置。
   mysql:
+    # image：镜像名。
     image: mysql:8.0
+    # container_name：容器名。
     container_name: hmdp-mysql
+    # restart：重启策略。
     restart: unless-stopped
     environment:
+      # MYSQL_ROOT_PASSWORD：root 密码。
       MYSQL_ROOT_PASSWORD: 290390
+      # MYSQL_DATABASE：初始化时创建的数据库名。
       MYSQL_DATABASE: dingping
+      # TZ：时区。
       TZ: UTC
     ports:
+      # 3306:3306：宿主机 3306 映射到容器 3306。
       - "3306:3306"
     command:
+      # command：MySQL 启动参数。
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
+      - --sql-mode=
     volumes:
+      # mysql-data：持久化 MySQL 数据目录。
       - mysql-data:/var/lib/mysql
+      # 01-hmdp.sql：初始化 SQL 脚本。
       - ./src/main/resources/db/hmdp.sql:/docker-entrypoint-initdb.d/01-hmdp.sql:ro
 
+  # redis：Redis 容器配置。
   redis:
     image: redis:6.2-alpine
     container_name: hmdp-redis
     restart: unless-stopped
     ports:
+      # 6379:6379：宿主机 6379 映射到容器 6379。
       - "6379:6379"
     volumes:
+      # redis-data：持久化 Redis 数据目录。
       - redis-data:/data
 
+  # rabbitmq：RabbitMQ 容器配置。
   rabbitmq:
     image: rabbitmq:3.13-management
     container_name: hmdp-rabbitmq
     restart: unless-stopped
     environment:
+      # RABBITMQ_DEFAULT_USER：默认用户名。
       RABBITMQ_DEFAULT_USER: guest
+      # RABBITMQ_DEFAULT_PASS：默认密码。
       RABBITMQ_DEFAULT_PASS: guest
     ports:
+      # 5672:5672：宿主机 5672 映射到容器 5672。
       - "5672:5672"
+      # 15672:15672：宿主机 15672 映射到容器 15672。
       - "15672:15672"
     volumes:
+      # rabbitmq-data：持久化 RabbitMQ 数据目录。
       - rabbitmq-data:/var/lib/rabbitmq
 
+# volumes：命名卷声明。
 volumes:
   mysql-data:
   redis-data:

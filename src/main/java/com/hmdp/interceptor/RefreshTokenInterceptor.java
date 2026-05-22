@@ -1,3 +1,5 @@
+// 文件说明：刷新登录态拦截器，负责从请求头拿 token、查 Redis 并把用户信息放进 ThreadLocal。
+
 package com.hmdp.interceptor;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -19,6 +21,7 @@ import javax.servlet.http.HttpSession;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+// 拦截器类：请求进入 Controller 前会先经过这里
 public class RefreshTokenInterceptor implements HandlerInterceptor {
 
     private  StringRedisTemplate stringRedisTemplate;
@@ -27,33 +30,34 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         this.stringRedisTemplate=stringRedisTemplate;
     }
 
-
+    // 刷新 token 并保存当前用户
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        //1.获取请求头中的token
+        // 1. 获取请求头里的 token。
         String token = request.getHeader("authorization");
-        //2.基于token获取redis中的用户
+        // 2. 没带 token，直接放行。
         if (StrUtil.isBlank(token)) {
             return true;
         }
         String userKey = RedisConstants.LOGIN_USER_KEY + token;
         Map<Object, Object> map = stringRedisTemplate.opsForHash().entries(userKey);
-        //3.判断用户是否存在
+        // 3. Redis 里没有用户信息，直接放行。
         if(map.isEmpty()) {
             return true;
         }
-        //5.将查询到Hash数据转换为userDTO对象
+        // 4. 把 Redis Hash 转成 UserDTO。
         UserDTO userDTO = BeanUtil.fillBeanWithMap(map, new UserDTO(), false);
-        //6.存在，保存用户信息到ThreadLocal
+        // 5. 保存到 ThreadLocal。
         UserHolder.saveUser(userDTO);
-        //7.刷新有效期
+        // 6. 刷新 token 有效期。
         stringRedisTemplate.expire(userKey,30, TimeUnit.MINUTES);
-        //放行
+        // 7. 放行。
         return true;
     }
 
+    // 请求结束后清理线程里的用户信息
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
-        HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
+        UserHolder.removeUser();
     }
 }

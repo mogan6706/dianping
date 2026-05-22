@@ -1,3 +1,5 @@
+// 文件说明：全局异常处理类，把运行时异常统一转换成前端更容易处理的响应。
+
 package com.hmdp.config;
 
 import com.hmdp.dto.Result;
@@ -6,8 +8,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @Slf4j
+// 控制器：负责接收前端请求并直接返回 HTTP 响应
 @RestControllerAdvice
 public class WebExceptionAdvice {
+    // 统一处理运行时异常
     @ExceptionHandler(RuntimeException.class)
     public Result handleRuntimeException(RuntimeException e) {
         log.error(e.toString(), e);

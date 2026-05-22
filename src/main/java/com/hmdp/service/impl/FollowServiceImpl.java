@@ -1,3 +1,5 @@
+// 文件说明：FollowServiceImpl 业务实现类，真正编排 Follow 模块的业务流程。
+
 package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -20,22 +22,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/**
- * <p>
- *  服务实现类
- * </p>
- *
- * @author 虎哥
- * @since 2021-12-22
- */
+// 业务类：负责处理当前模块的核心业务逻辑
 @Service
+// 业务实现类：真正编排当前模块的业务流程
 public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> implements IFollowService {
 
+    // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    // 注入 userService（UserServiceImpl）
     @Resource
     private UserServiceImpl userService;
+    // 关注或取关用户
     @Override
     public Result follow(Long followUserId, Boolean isFollow) {
         //获取登录用户
@@ -65,6 +64,7 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
         return Result.ok();
     }
 
+    // 判断是否已关注用户
     @Override
     public Result isFollow(Long followUserId) {
         Long userId = UserHolder.getUser().getId();
@@ -74,6 +74,7 @@ public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> impleme
 
     }
 
+    // 查询共同关注
     @Override
     public Result followCommons(Long id) {
         //获取当前用户

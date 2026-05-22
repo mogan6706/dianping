@@ -1,3 +1,5 @@
+// 文件说明：VoucherServiceImpl 业务实现类，真正编排 Voucher 模块的业务流程。
+
 package com.hmdp.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -17,22 +19,19 @@ import java.util.List;
 
 import static com.hmdp.utils.RedisConstants.SECKILL_STOCK_KEY;
 
-/**
- * <p>
- *  服务实现类
- * </p>
- *
- * @author 虎哥
- * @since 2021-12-22
- */
+// 业务类：负责处理当前模块的核心业务逻辑
 @Service
+// 业务实现类：真正编排当前模块的业务流程
 public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> implements IVoucherService {
 
+    // 注入 seckillVoucherService（ISeckillVoucherService）
     @Resource
     private ISeckillVoucherService seckillVoucherService;
+    // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    // 查询店铺优惠券列表
     @Override
     public Result queryVoucherOfShop(Long shopId) {
         // 查询优惠券信息
@@ -41,6 +40,7 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
         return Result.ok(vouchers);
     }
 
+    // 新增秒杀优惠券
     @Override
     @Transactional
     public void addSeckillVoucher(Voucher voucher) {

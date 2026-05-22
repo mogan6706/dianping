@@ -1,3 +1,5 @@
+// 文件说明：MyBatis-Plus 配置类，当前主要开启分页拦截器。
+
 package com.hmdp.config;
 
 import com.baomidou.mybatisplus.annotation.DbType;
@@ -6,8 +8,10 @@ import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerIntercept
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+// 配置类：Spring 启动时会加载这个类中的配置
 @Configuration
 public class MybatisConfig {
+    // 注册 MyBatis-Plus 分页拦截器
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();

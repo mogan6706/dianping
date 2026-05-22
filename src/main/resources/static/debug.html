@@ -1,0 +1,844 @@
+<!-- 文件说明：本地调试页，用来测试当前项目里所有已实现的 HTTP 接口。 -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HmDianPing API Debug</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f4ecdd;
+            --panel: rgba(255, 251, 243, 0.88);
+            --panel-strong: rgba(255, 251, 243, 0.96);
+            --ink: #162019;
+            --ink-soft: rgba(22, 32, 25, 0.64);
+            --line: rgba(22, 32, 25, 0.14);
+            --accent: #a33b2e;
+            --accent-soft: rgba(163, 59, 46, 0.1);
+            --shadow: 0 18px 50px rgba(22, 32, 25, 0.12);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            color: var(--ink);
+            font-family: "IBM Plex Mono", monospace;
+            background:
+                radial-gradient(circle at top left, rgba(163, 59, 46, 0.15), transparent 24%),
+                radial-gradient(circle at bottom right, rgba(22, 32, 25, 0.16), transparent 30%),
+                linear-gradient(135deg, #fbf6eb 0%, #efe3cc 46%, #f8f2e7 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(22, 32, 25, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(22, 32, 25, 0.025) 1px, transparent 1px);
+            background-size: 22px 22px;
+        }
+
+        .page {
+            width: min(1440px, calc(100vw - 28px));
+            margin: 18px auto 32px;
+        }
+
+        .hero {
+            position: relative;
+            padding: 26px 28px 32px;
+            border: 1px solid var(--line);
+            border-radius: 28px;
+            background: linear-gradient(145deg, rgba(255, 252, 246, 0.94), rgba(244, 236, 221, 0.92));
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .hero::after {
+            content: "API";
+            position: absolute;
+            right: 12px;
+            top: -18px;
+            font-family: "Cormorant Garamond", serif;
+            font-size: clamp(72px, 11vw, 150px);
+            letter-spacing: 0.08em;
+            color: rgba(22, 32, 25, 0.05);
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--accent);
+            font-size: 12px;
+            letter-spacing: 0.18em;
+            margin-bottom: 14px;
+        }
+
+        .eyebrow::before {
+            content: "";
+            width: 42px;
+            height: 1px;
+            background: currentColor;
+        }
+
+        h1 {
+            margin: 0;
+            max-width: 820px;
+            font-family: "Cormorant Garamond", serif;
+            font-size: clamp(42px, 6vw, 74px);
+            line-height: 0.96;
+            font-weight: 600;
+        }
+
+        .hero p {
+            max-width: 780px;
+            margin: 14px 0 0;
+            color: var(--ink-soft);
+            font-size: 14px;
+            line-height: 1.75;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 420px minmax(0, 1fr);
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        .stack {
+            display: grid;
+            gap: 18px;
+        }
+
+        .panel {
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            background: var(--panel);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 18px 20px 0;
+        }
+
+        .panel-head h2,
+        .panel-head h3 {
+            margin: 0;
+            font-family: "Cormorant Garamond", serif;
+            font-size: 30px;
+            font-weight: 600;
+        }
+
+        .panel-head span {
+            color: var(--ink-soft);
+            font-size: 11px;
+            letter-spacing: 0.12em;
+        }
+
+        .panel-body {
+            padding: 16px 20px 20px;
+        }
+
+        .field-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .field-grid.two {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .field {
+            display: grid;
+            gap: 7px;
+        }
+
+        .field label {
+            color: var(--ink-soft);
+            font-size: 12px;
+        }
+
+        input, textarea {
+            width: 100%;
+            border: 1px solid rgba(22, 32, 25, 0.16);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.68);
+            color: var(--ink);
+            font: inherit;
+            padding: 11px 12px;
+            outline: none;
+            transition: border-color 0.18s ease, transform 0.18s ease, background 0.18s ease;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.9);
+            transform: translateY(-1px);
+        }
+
+        textarea {
+            min-height: 114px;
+            resize: vertical;
+        }
+
+        .token-box {
+            min-height: 90px;
+            border: 1px dashed rgba(22, 32, 25, 0.2);
+            border-radius: 18px;
+            padding: 12px 14px;
+            background: rgba(22, 32, 25, 0.04);
+            color: var(--ink-soft);
+            word-break: break-all;
+            line-height: 1.7;
+        }
+
+        .token-box.has-token {
+            color: var(--ink);
+            background: rgba(163, 59, 46, 0.06);
+        }
+
+        .btn-row, .button-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .button-grid.two {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        button {
+            border: 0;
+            border-radius: 15px;
+            padding: 11px 14px;
+            font: inherit;
+            cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        button:hover { transform: translateY(-1px); }
+
+        .primary {
+            background: var(--ink);
+            color: #fff8ef;
+            box-shadow: 0 10px 20px rgba(22, 32, 25, 0.18);
+        }
+
+        .accent {
+            background: var(--accent);
+            color: #fff7f1;
+            box-shadow: 0 10px 20px rgba(163, 59, 46, 0.18);
+        }
+
+        .ghost {
+            background: rgba(22, 32, 25, 0.06);
+            color: var(--ink);
+            border: 1px solid rgba(22, 32, 25, 0.12);
+        }
+
+        .result-panel {
+            min-height: 760px;
+        }
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .chip {
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(22, 32, 25, 0.06);
+            color: var(--ink-soft);
+            font-size: 12px;
+        }
+
+        pre {
+            margin: 0;
+            min-height: 650px;
+            overflow: auto;
+            padding: 18px;
+            border-radius: 20px;
+            background: #0f1713;
+            color: #eef6e8;
+            line-height: 1.7;
+            font-size: 13px;
+        }
+
+        .groups {
+            display: grid;
+            gap: 16px;
+        }
+
+        .group {
+            border: 1px solid rgba(22, 32, 25, 0.12);
+            border-radius: 20px;
+            padding: 14px;
+            background: var(--panel-strong);
+        }
+
+        .group h4 {
+            margin: 0 0 10px;
+            font-family: "Cormorant Garamond", serif;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .group p {
+            margin: 0 0 12px;
+            color: var(--ink-soft);
+            line-height: 1.7;
+            font-size: 12px;
+        }
+
+        .empty-note {
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: var(--accent-soft);
+            color: var(--ink);
+            line-height: 1.7;
+            font-size: 12px;
+        }
+
+        .file-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .file-row input[type="file"] {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        @media (max-width: 1100px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+            .result-panel {
+                min-height: auto;
+            }
+            pre {
+                min-height: 360px;
+            }
+        }
+
+        @media (max-width: 720px) {
+            .page {
+                width: min(100vw - 16px, 100%);
+                margin: 8px auto 24px;
+            }
+            .field-grid.two,
+            .button-grid.two {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <section class="hero">
+        <div class="eyebrow">HM-DIANPING API DEBUG BOARD</div>
+        <h1>当前项目里所有已实现接口，都集中在这个页面调</h1>
+        <p>
+            这个页面按 controller 分组。你不需要一个个手敲 curl 了，直接在这里登录、保存 token、
+            填常用参数，然后点按钮看返回 JSON。`BlogCommentsController` 目前没有接口，也会明确标出来。
+        </p>
+    </section>
+
+    <div class="layout">
+        <div class="stack">
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>基础输入</h2>
+                    <span>COMMON PARAMS</span>
+                </div>
+                <div class="panel-body">
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="baseUrl">后端地址</label>
+                            <input id="baseUrl" value="http://127.0.0.1:8081">
+                        </div>
+                    </div>
+                    <div class="field-grid two" style="margin-top: 12px;">
+                        <div class="field"><label for="phone">手机号</label><input id="phone" value="13800138000"></div>
+                        <div class="field"><label for="code">验证码</label><input id="code" placeholder="发验证码后去后端日志里看"></div>
+                        <div class="field"><label for="userId">用户 id</label><input id="userId" value="1010"></div>
+                        <div class="field"><label for="shopId">商铺 id</label><input id="shopId" value="1"></div>
+                        <div class="field"><label for="typeId">商铺类型 id</label><input id="typeId" value="1"></div>
+                        <div class="field"><label for="current">页码 current</label><input id="current" value="1"></div>
+                        <div class="field"><label for="blogId">博客 id</label><input id="blogId" value="1"></div>
+                        <div class="field"><label for="followUserId">关注用户 id</label><input id="followUserId" value="1"></div>
+                        <div class="field"><label for="voucherId">优惠券 id</label><input id="voucherId" value="1"></div>
+                        <div class="field"><label for="xCoord">经度 x</label><input id="xCoord" placeholder="可留空"></div>
+                        <div class="field"><label for="yCoord">纬度 y</label><input id="yCoord" placeholder="可留空"></div>
+                        <div class="field"><label for="lastId">Feed 的 lastId</label><input id="lastId" value="9999999999999"></div>
+                        <div class="field"><label for="offset">Feed 的 offset</label><input id="offset" value="0"></div>
+                        <div class="field"><label for="shopName">商铺名称关键词</label><input id="shopName" value="火锅"></div>
+                        <div class="field"><label for="deleteFileName">删除图片文件名</label><input id="deleteFileName" placeholder="/blogs/x/x/file.png"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>Token</h2>
+                    <span>LOCAL STORAGE</span>
+                </div>
+                <div class="panel-body">
+                    <div id="tokenBox" class="token-box">当前没有 token，先登录。</div>
+                    <div class="button-grid two" style="margin-top: 12px;">
+                        <button id="copyTokenBtn" class="ghost">复制 token</button>
+                        <button id="clearTokenBtn" class="ghost">清空 token</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <h2>请求体</h2>
+                    <span>JSON BODY</span>
+                </div>
+                <div class="panel-body">
+                    <div class="field">
+                        <label for="blogBody">BlogController 保存博客</label>
+                        <textarea id="blogBody">{
+  "title": "调试页新建的博客",
+  "content": "这是用 debug.html 发出来的测试内容",
+  "images": "",
+  "liked": 0
+}</textarea>
+                    </div>
+                    <div class="field" style="margin-top: 12px;">
+                        <label for="shopBody">ShopController 新增/更新商铺</label>
+                        <textarea id="shopBody">{
+  "id": 1,
+  "name": "测试商铺",
+  "typeId": 1,
+  "images": "",
+  "area": "测试商圈",
+  "address": "测试地址",
+  "x": 121.5,
+  "y": 31.2,
+  "avgPrice": 50,
+  "sold": 0,
+  "comments": 0,
+  "score": 40,
+  "openHours": "10:00-22:00"
+}</textarea>
+                    </div>
+                    <div class="field" style="margin-top: 12px;">
+                        <label for="voucherBody">VoucherController 新增优惠券</label>
+                        <textarea id="voucherBody">{
+  "shopId": 1,
+  "title": "测试优惠券",
+  "subTitle": "仅供调试使用",
+  "rules": "全场通用",
+  "payValue": 1000,
+  "actualValue": 100,
+  "type": 1,
+  "stock": 20,
+  "beginTime": "2026-05-21T00:00:00",
+  "endTime": "2026-12-31T23:59:59"
+}</textarea>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="panel result-panel">
+            <div class="panel-head">
+                <h3>接口总面板</h3>
+                <span>ALL CONTROLLERS</span>
+            </div>
+            <div class="panel-body">
+                <div class="meta">
+                    <div class="chip" id="methodChip">METHOD: -</div>
+                    <div class="chip" id="pathChip">PATH: -</div>
+                    <div class="chip" id="statusChip">STATUS: -</div>
+                </div>
+
+                <div class="groups">
+                    <div class="group">
+                        <h4>UserController</h4>
+                        <p>`/user/**`：登录、当前用户、签到、查详情。</p>
+                        <div class="button-grid two">
+                            <button class="accent" data-action="user-code">POST /user/code</button>
+                            <button class="primary" data-action="user-login">POST /user/login</button>
+                            <button class="ghost" data-action="user-logout">POST /user/logout</button>
+                            <button class="ghost" data-action="user-me">GET /user/me</button>
+                            <button class="ghost" data-action="user-info">GET /user/info/{id}</button>
+                            <button class="ghost" data-action="user-id">GET /user/{id}</button>
+                            <button class="ghost" data-action="user-sign">POST /user/sign</button>
+                            <button class="ghost" data-action="user-sign-count">GET /user/sign/count</button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <h4>ShopController</h4>
+                        <p>`/shop/**`：商铺详情、新增、更新、按类型查、按名称查。</p>
+                        <div class="button-grid two">
+                            <button class="ghost" data-action="shop-id">GET /shop/{id}</button>
+                            <button class="ghost" data-action="shop-type">GET /shop/of/type</button>
+                            <button class="ghost" data-action="shop-name">GET /shop/of/name</button>
+                            <button class="accent" data-action="shop-save">POST /shop</button>
+                            <button class="accent" data-action="shop-update">PUT /shop</button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <h4>ShopTypeController</h4>
+                        <p>`/shop-type/list`：查商铺分类列表。</p>
+                        <div class="button-grid two">
+                            <button class="ghost" data-action="shop-type-list">GET /shop-type/list</button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <h4>BlogController</h4>
+                        <p>`/blog/**`：发博客、点赞、热门博客、关注流。</p>
+                        <div class="button-grid two">
+                            <button class="accent" data-action="blog-save">POST /blog</button>
+                            <button class="ghost" data-action="blog-like">PUT /blog/like/{id}</button>
+                            <button class="ghost" data-action="blog-of-me">GET /blog/of/me</button>
+                            <button class="ghost" data-action="blog-hot">GET /blog/hot</button>
+                            <button class="ghost" data-action="blog-id">GET /blog/{id}</button>
+                            <button class="ghost" data-action="blog-likes">GET /blog/likes/{id}</button>
+                            <button class="ghost" data-action="blog-user">GET /blog/of/user</button>
+                            <button class="ghost" data-action="blog-follow">GET /blog/of/follow</button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <h4>FollowController</h4>
+                        <p>`/follow/**`：关注、取关、是否关注、共同关注。</p>
+                        <div class="button-grid two">
+                            <button class="ghost" data-action="follow-true">PUT /follow/{id}/true</button>
+                            <button class="ghost" data-action="follow-false">PUT /follow/{id}/false</button>
+                            <button class="ghost" data-action="follow-or-not">GET /follow/or/not/{id}</button>
+                            <button class="ghost" data-action="follow-common">GET /follow/common/{id}</button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <h4>VoucherController</h4>
+                        <p>`/voucher/**`：新增普通券、秒杀券、查店铺券列表。</p>
+                        <div class="button-grid two">
+                            <button class="accent" data-action="voucher-add">POST /voucher</button>
+                            <button class="accent" data-action="voucher-seckill-add">POST /voucher/seckill</button>
+                            <button class="ghost" data-action="voucher-list">GET /voucher/list/{shopId}</button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <h4>VoucherOrderController</h4>
+                        <p>`/voucher-order/seckill/{id}`：发起秒杀下单。</p>
+                        <div class="button-grid two">
+                            <button class="ghost" data-action="voucher-order-seckill">POST /voucher-order/seckill/{id}</button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <h4>UploadController</h4>
+                        <p>`/upload/**`：上传博客图片、删除博客图片。上传要先选文件。</p>
+                        <div class="file-row">
+                            <input id="uploadFile" type="file" accept="image/*">
+                        </div>
+                        <div class="button-grid two" style="margin-top: 12px;">
+                            <button class="accent" data-action="upload-blog">POST /upload/blog</button>
+                            <button class="ghost" data-action="upload-delete">GET /upload/blog/delete</button>
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <h4>BlogCommentsController</h4>
+                        <div class="empty-note">
+                            这个 Controller 目前还是空的，没有任何 `@GetMapping`、`@PostMapping` 方法，所以当前没有可测试接口。
+                        </div>
+                    </div>
+                </div>
+
+                <pre id="resultBox" style="margin-top: 16px;">{
+  "hint": "左侧填参数，右侧点接口按钮开始测试"
+}</pre>
+            </div>
+        </section>
+    </div>
+</div>
+
+<script>
+    const TOKEN_KEY = "hmdp-debug-token";
+
+    const baseUrlInput = document.getElementById("baseUrl");
+    const phoneInput = document.getElementById("phone");
+    const codeInput = document.getElementById("code");
+    const userIdInput = document.getElementById("userId");
+    const shopIdInput = document.getElementById("shopId");
+    const typeIdInput = document.getElementById("typeId");
+    const currentInput = document.getElementById("current");
+    const blogIdInput = document.getElementById("blogId");
+    const followUserIdInput = document.getElementById("followUserId");
+    const voucherIdInput = document.getElementById("voucherId");
+    const xCoordInput = document.getElementById("xCoord");
+    const yCoordInput = document.getElementById("yCoord");
+    const lastIdInput = document.getElementById("lastId");
+    const offsetInput = document.getElementById("offset");
+    const shopNameInput = document.getElementById("shopName");
+    const deleteFileNameInput = document.getElementById("deleteFileName");
+    const blogBodyInput = document.getElementById("blogBody");
+    const shopBodyInput = document.getElementById("shopBody");
+    const voucherBodyInput = document.getElementById("voucherBody");
+    const uploadFileInput = document.getElementById("uploadFile");
+
+    const tokenBox = document.getElementById("tokenBox");
+    const resultBox = document.getElementById("resultBox");
+    const methodChip = document.getElementById("methodChip");
+    const pathChip = document.getElementById("pathChip");
+    const statusChip = document.getElementById("statusChip");
+
+    function getBaseUrl() {
+        return baseUrlInput.value.trim().replace(/\/+$/, "");
+    }
+
+    function getToken() {
+        return localStorage.getItem(TOKEN_KEY) || "";
+    }
+
+    function setToken(token) {
+        localStorage.setItem(TOKEN_KEY, token);
+        renderToken();
+    }
+
+    function clearToken() {
+        localStorage.removeItem(TOKEN_KEY);
+        renderToken();
+    }
+
+    function renderToken() {
+        const token = getToken();
+        if (!token) {
+            tokenBox.textContent = "当前没有 token，先登录。";
+            tokenBox.classList.remove("has-token");
+            return;
+        }
+        tokenBox.textContent = token;
+        tokenBox.classList.add("has-token");
+    }
+
+    function renderResult(method, path, status, body) {
+        methodChip.textContent = `METHOD: ${method}`;
+        pathChip.textContent = `PATH: ${path}`;
+        statusChip.textContent = `STATUS: ${status}`;
+        resultBox.textContent = JSON.stringify(body, null, 2);
+    }
+
+    async function request(path, options = {}) {
+        const headers = { ...(options.headers || {}) };
+        const token = getToken();
+        if (!headers.authorization && token) {
+            headers.authorization = token;
+        }
+        const response = await fetch(`${getBaseUrl()}${path}`, {
+            method: options.method || "GET",
+            headers,
+            body: options.body
+        });
+        const text = await response.text();
+        let body;
+        try {
+            body = text ? JSON.parse(text) : { message: "响应体为空" };
+        } catch (error) {
+            body = { raw: text, parseError: error.message };
+        }
+        renderResult(options.method || "GET", path, response.status, body);
+        return { response, body };
+    }
+
+    async function upload(path) {
+        const file = uploadFileInput.files[0];
+        if (!file) {
+            renderResult("POST", path, 400, { error: "请先选择要上传的文件" });
+            return;
+        }
+        const formData = new FormData();
+        formData.append("file", file);
+        await request(path, {
+            method: "POST",
+            body: formData
+        });
+    }
+
+    function queryString(params) {
+        const search = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== "" && value !== null && value !== undefined) {
+                search.append(key, value);
+            }
+        });
+        const value = search.toString();
+        return value ? `?${value}` : "";
+    }
+
+    async function handleAction(action) {
+        switch (action) {
+            case "user-code":
+                return request(`/user/code${queryString({ phone: phoneInput.value.trim() })}`, { method: "POST" });
+            case "user-login": {
+                const { body } = await request("/user/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        phone: phoneInput.value.trim(),
+                        code: codeInput.value.trim()
+                    })
+                });
+                if (body && body.success && body.data) {
+                    setToken(body.data);
+                }
+                return;
+            }
+            case "user-logout":
+                await request("/user/logout", { method: "POST" });
+                clearToken();
+                return;
+            case "user-me":
+                return request("/user/me");
+            case "user-info":
+                return request(`/user/info/${encodeURIComponent(userIdInput.value.trim())}`);
+            case "user-id":
+                return request(`/user/${encodeURIComponent(userIdInput.value.trim())}`);
+            case "user-sign":
+                return request("/user/sign", { method: "POST" });
+            case "user-sign-count":
+                return request("/user/sign/count");
+
+            case "shop-id":
+                return request(`/shop/${encodeURIComponent(shopIdInput.value.trim())}`);
+            case "shop-type":
+                return request(`/shop/of/type${queryString({
+                    typeId: typeIdInput.value.trim(),
+                    current: currentInput.value.trim(),
+                    x: xCoordInput.value.trim(),
+                    y: yCoordInput.value.trim()
+                })}`);
+            case "shop-name":
+                return request(`/shop/of/name${queryString({
+                    name: shopNameInput.value.trim(),
+                    current: currentInput.value.trim()
+                })}`);
+            case "shop-save":
+                return request("/shop", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: shopBodyInput.value
+                });
+            case "shop-update":
+                return request("/shop", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: shopBodyInput.value
+                });
+
+            case "shop-type-list":
+                return request("/shop-type/list");
+
+            case "blog-save":
+                return request("/blog", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: blogBodyInput.value
+                });
+            case "blog-like":
+                return request(`/blog/like/${encodeURIComponent(blogIdInput.value.trim())}`, { method: "PUT" });
+            case "blog-of-me":
+                return request(`/blog/of/me${queryString({ current: currentInput.value.trim() })}`);
+            case "blog-hot":
+                return request(`/blog/hot${queryString({ current: currentInput.value.trim() })}`);
+            case "blog-id":
+                return request(`/blog/${encodeURIComponent(blogIdInput.value.trim())}`);
+            case "blog-likes":
+                return request(`/blog/likes/${encodeURIComponent(blogIdInput.value.trim())}`);
+            case "blog-user":
+                return request(`/blog/of/user${queryString({
+                    current: currentInput.value.trim(),
+                    id: userIdInput.value.trim()
+                })}`);
+            case "blog-follow":
+                return request(`/blog/of/follow${queryString({
+                    lastId: lastIdInput.value.trim(),
+                    offset: offsetInput.value.trim()
+                })}`);
+
+            case "follow-true":
+                return request(`/follow/${encodeURIComponent(followUserIdInput.value.trim())}/true`, { method: "PUT" });
+            case "follow-false":
+                return request(`/follow/${encodeURIComponent(followUserIdInput.value.trim())}/false`, { method: "PUT" });
+            case "follow-or-not":
+                return request(`/follow/or/not/${encodeURIComponent(followUserIdInput.value.trim())}`);
+            case "follow-common":
+                return request(`/follow/common/${encodeURIComponent(followUserIdInput.value.trim())}`);
+
+            case "voucher-add":
+                return request("/voucher", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: voucherBodyInput.value
+                });
+            case "voucher-seckill-add":
+                return request("/voucher/seckill", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: voucherBodyInput.value
+                });
+            case "voucher-list":
+                return request(`/voucher/list/${encodeURIComponent(shopIdInput.value.trim())}`);
+
+            case "voucher-order-seckill":
+                return request(`/voucher-order/seckill/${encodeURIComponent(voucherIdInput.value.trim())}`, { method: "POST" });
+
+            case "upload-blog":
+                return upload("/upload/blog");
+            case "upload-delete":
+                return request(`/upload/blog/delete${queryString({ name: deleteFileNameInput.value.trim() })}`);
+
+            default:
+                renderResult("LOCAL", action, 400, { error: "未知操作" });
+        }
+    }
+
+    document.querySelectorAll("[data-action]").forEach((button) => {
+        button.addEventListener("click", () => handleAction(button.dataset.action));
+    });
+
+    document.getElementById("copyTokenBtn").addEventListener("click", async () => {
+        const token = getToken();
+        if (!token) {
+            renderResult("LOCAL", "copy-token", 400, { error: "当前没有 token 可以复制" });
+            return;
+        }
+        await navigator.clipboard.writeText(token);
+        renderResult("LOCAL", "copy-token", 200, { success: true, token });
+    });
+
+    document.getElementById("clearTokenBtn").addEventListener("click", () => {
+        clearToken();
+        renderResult("LOCAL", "clear-token", 200, { success: true, message: "本地 token 已清空" });
+    });
+
+    renderToken();
+</script>
+</body>
+</html>

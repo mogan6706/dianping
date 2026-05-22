@@ -1,3 +1,5 @@
+// 文件说明：ShopTypeServiceImpl 业务实现类，真正编排 Shop Type 模块的业务流程。
+
 package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -17,20 +19,16 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * <p>
- *  服务实现类
- * </p>
- *
- * @author 虎哥
- * @since 2021-12-22
- */
+// 业务类：负责处理当前模块的核心业务逻辑
 @Service
+// 业务实现类：真正编排当前模块的业务流程
 public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> implements IShopTypeService {
 
+    // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    // 查询并缓存商铺分类
     @Override
     public Result querySort() {
         List<String> shopTypeJson = stringRedisTemplate.opsForList().range(RedisConstants.SHOP_TYPE_KEY, 0, -1);

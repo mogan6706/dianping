@@ -1,3 +1,5 @@
+// 文件说明：BlogServiceImpl 业务实现类，真正编排 Blog 模块的业务流程。
+
 package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -34,25 +36,23 @@ import java.util.stream.LongStream;
 import static com.hmdp.utils.RedisConstants.BLOG_LIKED_KEY;
 import static com.hmdp.utils.RedisConstants.FEED_KEY;
 
-/**
- * <p>
- *  服务实现类
- * </p>
- *
- * @author 虎哥
- * @since 2021-12-22
- */
+// 业务类：负责处理当前模块的核心业务逻辑
 @Service
+// 业务实现类：真正编排当前模块的业务流程
 public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IBlogService {
 
+    // 注入 userService（IUserService）
     @Resource
     private IUserService userService;
 
+    // 注入 followService（IFollowService）
     @Resource
     private IFollowService followService;
 
+    // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    // 分页查询热门博客
     @Override
     public Result queryHotBlog(Integer current) {
         // 根据用户查询
@@ -69,6 +69,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         return Result.ok(records);
     }
 
+    // 点赞或取消点赞博客
     @Override
     public Result updateLike(Long id){
         //1.获取当前用户
@@ -96,6 +97,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         return Result.ok();
     }
 
+    // 查询前五个点赞用户
     @Override
     public Result queryBlogLikes(Long id) {
         //1.查询top5的点赞用户
@@ -120,6 +122,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
 
     }
 
+    // 保存博客并推送给粉丝
     @Override
     public Result saveBlog(Blog blog) {
         // 获取登录用户
@@ -144,6 +147,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         return Result.ok(blog.getId());
     }
 
+    // 分页查询关注推送
     @Override
     public Result quertBlogOfFollow(Long max, Integer offset) {
         //1.获取当前用户
@@ -192,6 +196,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
 
     }
 
+    // 根据 id 查询博客
     @Override
     public Result  queryBlogById(Long id) {
         //1.查询blog
@@ -206,6 +211,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         return Result.ok(blog);
     }
 
+    // 判断当前用户是否点赞
     private void isBlogLiked(Blog blog) {
         //1.获取当前用户
         UserDTO user = UserHolder.getUser();
@@ -221,6 +227,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         blog.setIsLike(score!=null);
     }
 
+    // 查询博客作者信息
     private void queryBlogUser(Blog blog) {
         Long userId = blog.getUserId();
         User user = userService.getById(userId);

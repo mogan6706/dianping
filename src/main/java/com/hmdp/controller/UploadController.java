@@ -1,3 +1,5 @@
+// 文件说明：UploadController 控制器，负责处理 Upload 相关的 HTTP 接口请求。
+
 package com.hmdp.controller;
 
 import cn.hutool.core.io.FileUtil;
@@ -13,10 +15,14 @@ import java.io.IOException;
 import java.util.UUID;
 
 @Slf4j
+// 控制器：负责接收前端请求并直接返回 HTTP 响应
 @RestController
+// 公共路径前缀：upload
 @RequestMapping("upload")
+// 控制器类：负责接收请求、调用业务层并返回结果
 public class UploadController {
 
+    // 上传博客图片
     @PostMapping("blog")
     public Result uploadImage(@RequestParam("file") MultipartFile image) {
         try {
@@ -34,6 +40,7 @@ public class UploadController {
         }
     }
 
+    // 删除博客图片
     @GetMapping("/blog/delete")
     public Result deleteBlogImg(@RequestParam("name") String filename) {
         File file = new File(SystemConstants.IMAGE_UPLOAD_DIR, filename);
@@ -44,6 +51,7 @@ public class UploadController {
         return Result.ok();
     }
 
+    // 生成分目录的新文件名
     private String createNewFileName(String originalFilename) {
         // 获取后缀
         String suffix = StrUtil.subAfter(originalFilename, ".", true);

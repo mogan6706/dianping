@@ -1,3 +1,5 @@
+-- 文件说明：数据库初始化脚本，用来创建本项目的业务表并插入演示数据。
+
 /*
  Navicat Premium Data Transfer
 
