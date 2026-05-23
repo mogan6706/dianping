@@ -38,11 +38,12 @@ public class QueueConfig {
     public Queue queueA(){
         final HashMap<String, Object> arguments
                 = new HashMap<>();
+        // QA 中的消息超时后会被 RabbitMQ 投递到死信交换机 Y。
         // x-dead-letter-exchange：死信交换机。
         arguments.put("x-dead-letter-exchange",Y_DEAD_LETTER_EXCHANGE);
         // x-dead-letter-routing-key：死信路由键。
         arguments.put("x-dead-letter-routing-key","YD");
-        // x-message-ttl：消息过期时间。
+        // x-message-ttl：普通队列消息最多停留 10 秒，超时后进入死信队列。
         arguments.put("x-message-ttl",10000);
 
         return QueueBuilder.durable(QUEUE_A)
@@ -61,7 +62,7 @@ public class QueueConfig {
     @Bean
     public Binding queueABindingX(@Qualifier("queueA")Queue queueA,
                                   @Qualifier("xExchange") DirectExchange xExchange){
-        // XA：普通消息路由键。
+        // 业务发送到交换机 X 且 routingKey=XA 的消息会进入普通队列 QA。
         return BindingBuilder.bind(queueA).to(xExchange).with("XA");
     }
 
@@ -70,7 +71,7 @@ public class QueueConfig {
     public  Binding queueDBindingY(@Qualifier("queueD")Queue queueD,
                                    @Qualifier("yExchange") DirectExchange yExchange
     ){
-        // YD：死信消息路由键。
+        // 普通队列转发出来的死信 routingKey=YD，因此绑定到死信队列 QD。
         return BindingBuilder.bind(queueD).to(yExchange).with("YD");
     }
 

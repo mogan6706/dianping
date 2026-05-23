@@ -15,7 +15,7 @@ public class RedissonConfig {
     // 创建 Redisson 客户端
     @Bean
     public RedissonClient redissonClient(){
-        //配置
+        // 当前项目使用单机 Redis；RedissonClient 主要用于秒杀一人一单的分布式锁。
         Config config = new Config();
         config.useSingleServer().setAddress("redis://127.0.0.1:6379");
         return Redisson.create(config);

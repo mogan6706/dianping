@@ -14,6 +14,7 @@ public class WebExceptionAdvice {
     // 统一处理运行时异常
     @ExceptionHandler(RuntimeException.class)
     public Result handleRuntimeException(RuntimeException e) {
+        // 后端记录完整异常栈，前端只拿到统一错误文案，避免暴露内部实现细节。
         log.error(e.toString(), e);
         return Result.fail("服务器异常");
     }

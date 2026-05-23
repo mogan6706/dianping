@@ -66,6 +66,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
     private static final DefaultRedisScript<Long> SECKILL_SCRIPT;
     static {
+        // Lua 脚本把库存校验、一人一单校验、扣 Redis 库存和写入订单消息做成原子操作。
         SECKILL_SCRIPT=new DefaultRedisScript<>();
         SECKILL_SCRIPT.setLocation(new ClassPathResource("seckill.lua"));
         SECKILL_SCRIPT.setResultType(Long.class);
@@ -174,7 +175,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
 
         // 处理异步秒杀订单
         public void handleVoucherOrder(VoucherOrder voucherOrder) {
-            // 1. 异步消费阶段的下单逻辑。
+            // 1. 异步消费阶段再次按用户加锁，防止同一用户并发消息重复创建订单。
             Long userId = voucherOrder.getUserId();
             RLock lock = redissonClient.getLock("lock:order:" + userId);
             boolean isLock = lock.tryLock();
@@ -183,12 +184,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                return;
             }
             try {
-                // 2. 通过代理对象调用事务方法。
+                // 2. 通过代理对象调用事务方法，确保 @Transactional 生效。
                 proxy.createVoucherOrder(voucherOrder);
             } catch (IllegalStateException e) {
                 throw new RuntimeException(e);
             }finally {
-                //释放锁
+                // 3. 订单处理结束后释放用户维度的分布式锁。
                 lock.unlock();
             }
         }
@@ -198,9 +199,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     public Result seckillVoucher(Long voucherId) {
         // 1. 获取当前用户 id。
         Long userId = UserHolder.getUser().getId();
-        // 2. 生成订单 id。
+        // 2. 提前生成订单 id，Lua 脚本和异步消费者共用这个 id。
         long orderId = redisIdWorker.nextId("order");
-        // 3. 先执行 Lua 脚本预检。
+        // 3. 先执行 Lua 脚本预检；失败时不进入消息队列，直接返回错误。
         Long result = stringRedisTemplate.execute(
                 SECKILL_SCRIPT,
                 Collections.emptyList(),
@@ -212,13 +213,14 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             r = result.intValue();
         }
         if(r!=0){
+            // Lua 返回 1 表示库存不足，2 表示当前用户已经下过单。
             return Result.fail(r==1?"库存不足":"不能重复下单");
         }
 //        //3.获取代理对象
 //        proxy = (IVoucherOrderService) AopContext.currentProxy();
 //        //4.返回订单id
 //        return Result.ok(orderId);
-        // 5. 预检成功后发送 RabbitMQ 消息。
+        // 5. 预检成功后发送 RabbitMQ 消息，由消费者异步落库，缩短接口响应时间。
         VoucherOrder order = new VoucherOrder();
         order.setId(orderId);
         order.setUserId(userId);
@@ -227,6 +229,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         try {
             rabbitTemplate.convertAndSend("X","XA",jsonStr );
         } catch (Exception e) {
+            // 消息发送失败时抛异常，让调用方知道订单没有进入异步处理链路。
             log.error("发送 RabbitMQ 消息失败，订单ID: {}", orderId, e);
             throw new RuntimeException("发送消息失败");
         }
@@ -281,13 +284,14 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     // 创建秒杀订单
     @Transactional
     public void createVoucherOrder(VoucherOrder voucherOrder) {
-        // 1. 数据库层面再次校验一人一单和库存。
+        // 1. 数据库层面再次校验一人一单，兜底防止重复消费或绕过 Redis。
         Long userId =voucherOrder.getUserId();
             int count = query().eq("user_id", userId).eq("voucher_id", voucherOrder.getVoucherId()).count();
             if (count > 0) {
                 log.error("用户已经购买过一次了");
                 return;
             }
+            // 2. 扣减数据库库存时带 stock > 0 条件，避免并发下库存扣成负数。
             boolean success = seckillVoucherService
                     .update()
                     .setSql("stock=stock-1")
@@ -299,7 +303,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                 return ;
             }
 
-            // 2. 保存订单记录。
+            // 3. 库存扣减成功后保存订单记录。
             save(voucherOrder);
 
     }

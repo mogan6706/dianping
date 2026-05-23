@@ -34,9 +34,8 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
     // 查询店铺优惠券列表
     @Override
     public Result queryVoucherOfShop(Long shopId) {
-        // 查询优惠券信息
+        // 通过自定义 SQL 同时查询普通优惠券和秒杀优惠券扩展信息。
         List<Voucher> vouchers = getBaseMapper().queryVoucherOfShop(shopId);
-        // 返回结果
         return Result.ok(vouchers);
     }
 
@@ -44,16 +43,16 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
     @Override
     @Transactional
     public void addSeckillVoucher(Voucher voucher) {
-        // 保存优惠券
+        // 1. 先保存优惠券基础信息，生成 voucher.id。
         save(voucher);
-        // 保存秒杀信息
+        // 2. 秒杀专属字段单独保存到 tb_seckill_voucher。
         SeckillVoucher seckillVoucher = new SeckillVoucher();
         seckillVoucher.setVoucherId(voucher.getId());
         seckillVoucher.setStock(voucher.getStock());
         seckillVoucher.setBeginTime(voucher.getBeginTime());
         seckillVoucher.setEndTime(voucher.getEndTime());
         seckillVoucherService.save(seckillVoucher);
-        //保存秒杀得库存到redis
+        // 3. 秒杀库存预热到 Redis，Lua 脚本会先扣 Redis 库存再异步下单。
         stringRedisTemplate.opsForValue().set(SECKILL_STOCK_KEY +voucher.getId(),voucher.getStock().toString());
 
     }

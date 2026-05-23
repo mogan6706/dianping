@@ -44,6 +44,12 @@ public class BlogController {
         return blogService.updateLike(id);
     }
 
+    // 查询博客点赞用户
+    @GetMapping("/likes/{id}")
+    public Result queryBlogLikes(@PathVariable("id") Long id){
+        return blogService.queryBlogLikes(id);
+    }
+
     // 查询当前用户发布的博客
     @GetMapping("/of/me")
     public Result queryMyBlog(@RequestParam(value = "current", defaultValue = "1") Integer current) {
@@ -69,12 +75,6 @@ public class BlogController {
         return blogService.queryBlogById(id);
     }
 
-    // 查询博客点赞用户
-    @GetMapping("/likes/{id}")
-    public Result queryBlogLikes(@PathVariable("id") Long id){
-        return blogService.queryBlogLikes(id);
-    }
-
     // 按用户查询博客
     @GetMapping("/of/user")
     public Result queryBlogByUserId(
@@ -88,12 +88,13 @@ public class BlogController {
         List<Blog> records = page.getRecords();
         return Result.ok(records);
     }
+
     // 分页查询关注推送
     @GetMapping("/of/follow")
     public Result queryBlogOfFollow(
-            @RequestParam("lastId") Long max,
+            @RequestParam("maxTime") Long maxTime,
             @RequestParam(value = "offset",defaultValue = "0") Integer offset){
-        return blogService.quertBlogOfFollow(max,offset);
+        return blogService.queryBlogOfFollow(maxTime,offset);
 
     }
 }

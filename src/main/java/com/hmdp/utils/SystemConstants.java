@@ -3,8 +3,6 @@
 package com.hmdp.utils;
 
 public class SystemConstants {
-    // 博客图片上传到本地时使用的目录
-    public static final String IMAGE_UPLOAD_DIR = "D:\\tlias\\nginx-1.18.0 dianping\\html\\hmdp\\imgs";
     // 自动生成昵称时使用的前缀
     public static final String USER_NICK_NAME_PREFIX = "user_";
     // 普通分页查询每页默认条数

@@ -385,7 +385,7 @@
                         <div class="field"><label for="voucherId">优惠券 id</label><input id="voucherId" value="1"></div>
                         <div class="field"><label for="xCoord">经度 x</label><input id="xCoord" placeholder="可留空"></div>
                         <div class="field"><label for="yCoord">纬度 y</label><input id="yCoord" placeholder="可留空"></div>
-                        <div class="field"><label for="lastId">Feed 的 lastId</label><input id="lastId" value="9999999999999"></div>
+                        <div class="field"><label for="maxTime">Feed 的 maxTime</label><input id="maxTime" value="9999999999999"></div>
                         <div class="field"><label for="offset">Feed 的 offset</label><input id="offset" value="0"></div>
                         <div class="field"><label for="shopName">商铺名称关键词</label><input id="shopName" value="火锅"></div>
                         <div class="field"><label for="deleteFileName">删除图片文件名</label><input id="deleteFileName" placeholder="/blogs/x/x/file.png"></div>
@@ -552,7 +552,7 @@
                     </div>
 
                     <div class="group">
-                        <h4>UploadController</h4>
+                        <h4>BlogImageController</h4>
                         <p>`/upload/**`：上传博客图片、删除博客图片。上传要先选文件。</p>
                         <div class="file-row">
                             <input id="uploadFile" type="file" accept="image/*">
@@ -594,7 +594,7 @@
     const voucherIdInput = document.getElementById("voucherId");
     const xCoordInput = document.getElementById("xCoord");
     const yCoordInput = document.getElementById("yCoord");
-    const lastIdInput = document.getElementById("lastId");
+    const maxTimeInput = document.getElementById("maxTime");
     const offsetInput = document.getElementById("offset");
     const shopNameInput = document.getElementById("shopName");
     const deleteFileNameInput = document.getElementById("deleteFileName");
@@ -778,7 +778,7 @@
                 })}`);
             case "blog-follow":
                 return request(`/blog/of/follow${queryString({
-                    lastId: lastIdInput.value.trim(),
+                    maxTime: maxTimeInput.value.trim(),
                     offset: offsetInput.value.trim()
                 })}`);
 

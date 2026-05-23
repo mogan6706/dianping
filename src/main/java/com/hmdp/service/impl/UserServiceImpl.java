@@ -92,13 +92,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
         // 6. 把用户信息转成 UserDTO。
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
+        // Redis Hash 只存字符串，这里把 UserDTO 字段统一转成字符串，避免类型序列化问题。
         Map<String, Object> map = BeanUtil.beanToMap(userDTO, new HashMap<>(),
                 CopyOptions.create().setIgnoreNullValue(true)
                         .setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
         // 7. 把 token 和用户信息存到 Redis。
         String tokenKey=RedisConstants.LOGIN_USER_KEY+token;
         stringRedisTemplate.opsForHash().putAll(tokenKey,map);
-        stringRedisTemplate.expire(tokenKey,30,TimeUnit.MINUTES);
+        stringRedisTemplate.expire(tokenKey, RedisConstants.LOGIN_USER_TTL, TimeUnit.DAYS);
         // 8. 返回 token。
         return Result.ok(token);
     }
@@ -143,6 +144,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         String key = USER_SIGN_KEY + userId + keySuffix;
         // 2. 取出从 1 号到今天的签到 bit。
         int dayOfMonth = now.getDayOfMonth();
+        // 使用 unsigned(dayOfMonth) 一次性取出本月 1 号到今天的签到位图。
         List<Long> result = stringRedisTemplate.opsForValue()
                 .bitField(key, BitFieldSubCommands.create()
                         .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth))
@@ -157,6 +159,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         }
         // 3. 统计连续签到天数。
         int count=0;
+        // 从最低位开始检查，最低位表示今天；遇到第一个 0 就说明连续签到中断。
         while (true) {
             //让这个数字与1做与运算，得到数字的最后一个bit位，判断这个bit是否为0
             if((num&1)==0) {
@@ -175,6 +178,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     // 根据手机号创建新用户
     private User createUserWithPhone(String phone) {
+        // 首次登录自动注册，只保存手机号和随机昵称。
         User user = new User();
         user.setPhone(phone);
         user.setNickName(SystemConstants.USER_NICK_NAME_PREFIX +RandomUtil.randomString(10));

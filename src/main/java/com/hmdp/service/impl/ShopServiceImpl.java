@@ -55,6 +55,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     @Override
     public Result queryById(Long id){
 
+        // 当前店铺详情使用逻辑过期方案：Redis 必须已有缓存，过期后返回旧值并异步重建。
         Shop shop = clientClient.
                 queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
         if(shop==null){
@@ -68,20 +69,21 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     private static final ExecutorService CACHE_REBUILD_EXECUTOR= Executors.newFixedThreadPool(10);
 
 
-    // 把商铺数据预热到 Redis
-    public void saveShop2Redis(Long id,Long expireSeconds) throws InterruptedException {
-        // 1. 查询店铺数据。
-        Shop shop = getById(id);
-        Thread.sleep(200);
-        // 2. 封装逻辑过期时间。
-        RedisData redisData = new RedisData();
-        redisData.setData(shop);
-        redisData.setExpireTime(LocalDateTime.now().plusSeconds(expireSeconds));
-        // 3. 写入 Redis。
-        stringRedisTemplate.opsForValue().set(CACHE_SHOP_KEY+id,JSONUtil.toJsonStr(redisData));
+    // 新增商铺并写入逻辑过期缓存
+    @Override
+    @Transactional
+    public Result saveShop(Shop shop) {
+        // 1. 先写数据库；MyBatis-Plus 会把自增主键回填到 shop.id。
+        boolean success = save(shop);
+        if (!success) {
+            return Result.fail("新增店铺失败");
+        }
+        // 2. 新增时请求对象就是完整入库对象，可以直接写逻辑过期缓存，少查一次数据库。
+        clientClient.setWithLogicalExpire(CACHE_SHOP_KEY + shop.getId(), shop, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+        return Result.ok(shop.getId());
     }
 
-    // 更新商铺并删除缓存
+    // 更新商铺并重建逻辑过期缓存
     @Override
     @Transactional
     public Result update(Shop shop) {
@@ -90,9 +92,15 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             return Result.fail("店铺id不能为空");
         }
         // 1. 先改数据库。
-        updateById(shop);
-        // 2. 再删缓存。
-        stringRedisTemplate.delete(CACHE_SHOP_KEY+shop.getId());
+        boolean success = updateById(shop);
+        if (!success) {
+            return Result.fail("店铺不存在或更新失败");
+        }
+        // 2. 更新请求可能只传部分字段，所以按 id 回查完整对象后再重建缓存。
+        Shop newShop = getById(id);
+        if (newShop != null) {
+            clientClient.setWithLogicalExpire(CACHE_SHOP_KEY + id, newShop, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+        }
         return Result.ok();
     }
 

@@ -39,19 +39,20 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         if (StrUtil.isBlank(token)) {
             return true;
         }
+        // 3. token 对应的用户信息以 Redis Hash 形式保存。
         String userKey = RedisConstants.LOGIN_USER_KEY + token;
         Map<Object, Object> map = stringRedisTemplate.opsForHash().entries(userKey);
-        // 3. Redis 里没有用户信息，直接放行。
+        // 4. Redis 里没有用户信息，说明未登录或 token 已过期，交给后续 LoginInterceptor 判断。
         if(map.isEmpty()) {
             return true;
         }
-        // 4. 把 Redis Hash 转成 UserDTO。
+        // 5. 把 Redis Hash 转成 UserDTO。
         UserDTO userDTO = BeanUtil.fillBeanWithMap(map, new UserDTO(), false);
-        // 5. 保存到 ThreadLocal。
+        // 6. 保存到 ThreadLocal，后续业务代码可以通过 UserHolder 获取当前用户。
         UserHolder.saveUser(userDTO);
-        // 6. 刷新 token 有效期。
-        stringRedisTemplate.expire(userKey,30, TimeUnit.MINUTES);
-        // 7. 放行。
+        // 7. 每次访问都刷新 token 有效期，实现 30 天滑动过期。
+        stringRedisTemplate.expire(userKey, RedisConstants.LOGIN_USER_TTL, TimeUnit.DAYS);
+        // 8. 放行。
         return true;
     }
 

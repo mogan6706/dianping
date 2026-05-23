@@ -58,3 +58,9 @@
     level:
       # com.hmdp：项目包日志级别。
       com.hmdp: debug
+
+  # hmdp：项目自定义配置。
+  hmdp:
+    upload:
+      # image-dir：博客图片上传目录。前端访问图片时，需确保该目录被静态服务器映射。
+      image-dir: ./uploads/imgs

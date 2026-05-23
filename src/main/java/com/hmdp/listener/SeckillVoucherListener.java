@@ -34,9 +34,9 @@ public class SeckillVoucherListener {
         log.info("正常队列:");
         VoucherOrder voucherOrder = JSONUtil.toBean(msg, VoucherOrder.class);
         log.info(voucherOrder.toString());
-        // 2. 保存订单。
+        // 2. 普通队列消息表示订单仍在有效支付时间内，先保存订单。
         voucherOrderService.save(voucherOrder);
-        // 3. 扣减数据库库存。
+        // 3. 扣减数据库库存时带 stock > 0 条件，避免库存变成负数。
         Long voucherId=voucherOrder.getVoucherId();
         seckillVoucherService.update()
                 .setSql("stock = stock - 1") // set stock = stock - 1
@@ -48,11 +48,12 @@ public class SeckillVoucherListener {
     // 消费死信队列里的超时消息
     @RabbitListener(queues = "QD")
     public void receivedD(Message message)throws Exception{
-        // 死信队列消费者。
+        // 1. 死信队列接收超时或被拒绝的消息；这里仍按订单消息做兜底处理。
         log.info("死信队列:");
         String msg=new String(message.getBody());
         VoucherOrder voucherOrder = JSONUtil.toBean(msg, VoucherOrder.class);
         log.info(voucherOrder.toString());
+        // 2. 保存订单并扣减库存，逻辑与普通队列保持一致。
         voucherOrderService.save(voucherOrder);
 
         Long voucherId=voucherOrder.getVoucherId();

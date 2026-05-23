@@ -31,38 +31,28 @@ public class ShopTypeServiceImpl extends ServiceImpl<ShopTypeMapper, ShopType> i
     // 查询并缓存商铺分类
     @Override
     public Result querySort() {
+        // 1. 分类数据变化少，优先从 Redis List 中读取，避免每次都查数据库。
         List<String> shopTypeJson = stringRedisTemplate.opsForList().range(RedisConstants.SHOP_TYPE_KEY, 0, -1);
         if (shopTypeJson != null && !shopTypeJson.isEmpty()) {
+            // 2. Redis List 中每个元素都是一个 ShopType 的 JSON 字符串，需要逐个反序列化。
             List<ShopType> shopTypes = shopTypeJson.stream()
                     .map(shopType -> JSONUtil.toBean(shopType, ShopType.class))
                     .collect(Collectors.toList());
             return Result.ok(shopTypes);
         }
+
+        // 3. Redis 未命中时回源数据库，并按 sort 字段保证分类展示顺序稳定。
         List<ShopType> shopTypes = query().orderByAsc("sort").list();
         if(shopTypes==null||shopTypes.isEmpty()){
             return Result.fail("没有分类数据");
         }
+
+        // 4. 写入 Redis List，后续可以直接按原顺序读取完整分类列表。
         for (ShopType shopType : shopTypes) {
             String json = JSONUtil.toJsonStr(shopType);
             stringRedisTemplate.opsForList().rightPush(RedisConstants.SHOP_TYPE_KEY,json);
         }
+        // 5. 当前请求直接返回数据库结果，不需要再从 Redis 读一遍。
         return Result.ok(shopTypes);
-        //1.先从redis缓存看是否存在
-        // String shopTypeJson = stringRedisTemplate.opsForValue().get(RedisConstants.SHOP_TYPE_KEY);
-//        if(StrUtil.isNotBlank(shopTypeJson)) {
-//            //2.如果存在，返回分类信息
-//            return Result.ok(JSONUtil.toList(shopTypeJson, ShopType.class));
-//        }
-//      //3.不存在，则查询数据库
-//        List<ShopType> shopTypes = query().orderByAsc("sort").list();
-//        if(shopTypes==null) {
-//            //4.不存在，则返回错误信息
-//            return Result.fail("没有分类数据");
-//        }
-//        // 5.数据库存在在，则存入redis，返回分类信息
-//        String json = StrUtil.toString(shopTypes);
-//        stringRedisTemplate.opsForValue().set(RedisConstants.SHOP_TYPE_KEY,json);
-//
-//        return Result.ok(shopTypes);
     }
 }

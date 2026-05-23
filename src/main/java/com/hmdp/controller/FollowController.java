@@ -4,7 +4,7 @@ package com.hmdp.controller;
 
 
 import com.hmdp.dto.Result;
-import com.hmdp.service.IFollowService;
+import com.hmdp.service.IBlogImageService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -17,11 +17,11 @@ import javax.annotation.Resource;
 public class FollowController {
     // 注入 followService（IFollowService）
     @Resource
-    private IFollowService followService;
+    private IBlogImageService followService;
     // 关注或取关用户
-    @PutMapping("/{id}/{isFollow}")
-    public Result follow(@PathVariable("id") Long followUserId,@PathVariable("isFollow") Boolean isFollow){
-        return followService.follow(followUserId,isFollow);
+    @PutMapping("/{id}/{shouldFollow}")
+    public Result follow(@PathVariable("id") Long followUserId,@PathVariable("shouldFollow") Boolean shouldFollow){
+        return followService.follow(followUserId,shouldFollow);
     }
 
     // 判断是否已关注用户
