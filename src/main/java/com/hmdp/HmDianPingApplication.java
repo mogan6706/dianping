@@ -8,6 +8,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 // 功能开关：开启 AOP 代理功能
 @EnableAspectJAutoProxy(exposeProxy = true)
@@ -15,6 +16,8 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @MapperScan("com.hmdp.mapper")
 // 功能开关：开启 RabbitMQ 监听功能
 @EnableRabbit
+// 功能开关：开启 Spring Task 定时任务
+@EnableScheduling
 // 启动类注解：告诉 Spring Boot 从这里开始启动整个项目
 @SpringBootApplication
 public class HmDianPingApplication {
