@@ -14,6 +14,7 @@ import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -21,6 +22,9 @@ import static com.hmdp.utils.RedisConstants.SHOP_GEO_KEY;
 
 @SpringBootTest
 public class CacheWarmupTool {
+    // 店铺缓存预热时额外增加 0~5 分钟随机 TTL，避免同一批缓存同时过期。
+    private static final long SHOP_CACHE_TTL_RANDOM_MINUTES = 5L;
+
 
     @Resource
     private IShopService shopService;
@@ -35,10 +39,12 @@ public class CacheWarmupTool {
     void warmupAllShops() {
         List<Shop> shopList = shopService.list();
         for (Shop shop : shopList) {
+            long ttl = RedisConstants.CACHE_SHOP_TTL
+                    + ThreadLocalRandom.current().nextLong(SHOP_CACHE_TTL_RANDOM_MINUTES + 1);
             cacheClient.setWithLogicalExpire(
                     RedisConstants.CACHE_SHOP_KEY + shop.getId(),
                     shop,
-                    RedisConstants.CACHE_SHOP_TTL,
+                    ttl,
                     TimeUnit.MINUTES
             );
         }

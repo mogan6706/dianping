@@ -2,11 +2,7 @@
 
 package com.hmdp.service.impl;
 
-import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.Shop;
@@ -14,10 +10,7 @@ import com.hmdp.mapper.ShopMapper;
 import com.hmdp.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.CacheClient;
-import com.hmdp.utils.RedisConstants;
-import com.hmdp.utils.RedisData;
 import com.hmdp.utils.SystemConstants;
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResult;
 import org.springframework.data.geo.GeoResults;
@@ -29,13 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Generated;
 import javax.annotation.Resource;
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.LongStream;
 
 import static com.hmdp.utils.RedisConstants.*;
 
@@ -55,7 +45,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     @Override
     public Result queryById(Long id){
 
-        // 当前店铺详情使用逻辑过期方案：Redis 必须已有缓存，过期后返回旧值并异步重建。
+        // 当前热门店铺详情使用逻辑过期方案：定时任务提前刷新缓存，过期时先返回旧数据再异步重建。
         Shop shop = clientClient.
                 queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
         if(shop==null){
@@ -69,7 +59,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     private static final ExecutorService CACHE_REBUILD_EXECUTOR= Executors.newFixedThreadPool(10);
 
 
-    // 新增商铺并写入逻辑过期缓存
+    // 新增商铺，并写入逻辑过期缓存
     @Override
     @Transactional
     public Result saveShop(Shop shop) {
@@ -78,12 +68,12 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         if (!success) {
             return Result.fail("新增店铺失败");
         }
-        // 2. 新增时请求对象就是完整入库对象，可以直接写逻辑过期缓存，少查一次数据库。
+        // 2. 逻辑过期方案要求缓存提前存在，新增成功后直接写入缓存。
         clientClient.setWithLogicalExpire(CACHE_SHOP_KEY + shop.getId(), shop, CACHE_SHOP_TTL, TimeUnit.MINUTES);
         return Result.ok(shop.getId());
     }
 
-    // 更新商铺并重建逻辑过期缓存
+    // 更新商铺，并刷新逻辑过期缓存
     @Override
     @Transactional
     public Result update(Shop shop) {
@@ -96,7 +86,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         if (!success) {
             return Result.fail("店铺不存在或更新失败");
         }
-        // 2. 更新请求可能只传部分字段，所以按 id 回查完整对象后再重建缓存。
+        // 2. 更新请求可能只传部分字段，所以按 id 回查完整对象后再刷新缓存。
         Shop newShop = getById(id);
         if (newShop != null) {
             clientClient.setWithLogicalExpire(CACHE_SHOP_KEY + id, newShop, CACHE_SHOP_TTL, TimeUnit.MINUTES);

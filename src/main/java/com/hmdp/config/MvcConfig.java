@@ -4,6 +4,7 @@ package com.hmdp.config;
 
 import com.hmdp.interceptor.LoginInterceptor;
 import com.hmdp.interceptor.RefreshTokenInterceptor;
+import com.hmdp.utils.JwtUtils;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -18,6 +19,9 @@ public class MvcConfig implements WebMvcConfigurer {
     // 注入 Redis 操作对象
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    // 注入 JWT 工具
+    @Resource
+    private JwtUtils jwtUtils;
 
     // 注册项目里的拦截器
     @Override
@@ -34,14 +38,23 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/shop/**",        // 商铺接口
                         "/shop-type/**",   // 商铺分类
                         "/blog/hot",       // 热门博客
-                        "/debug.html"      // 本地调试页面
+                        "/debug.html",     // 本地调试页面
+                        "/ws/**",          // WebSocket 握手路径
+                        "/doc.html",       // Knife4j 文档页面
+                        "/swagger-ui/**",  // Swagger UI
+                        "/swagger-ui.html",
+                        "/v2/api-docs",
+                        "/v3/api-docs/**",
+                        "/swagger-resources/**",
+                        "/webjars/**",
+                        "/favicon.ico"
                 )
 
                 // 执行顺序（数字越小越先执行）
                 .order(1);
 
         // 注册 token 刷新拦截器
-        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate))
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate, jwtUtils))
 
                 // 拦截所有请求
                 .addPathPatterns("/**")

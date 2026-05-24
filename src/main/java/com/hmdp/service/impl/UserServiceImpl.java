@@ -3,8 +3,6 @@
 package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.bean.copier.CopyOptions;
-import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
@@ -27,9 +25,7 @@ import javax.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -44,6 +40,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+    // 注入 JWT 工具
+    @Resource
+    private JwtUtils jwtUtils;
     // 发送登录验证码
     @Override
     public Result sendCode(String phone, HttpSession session) {
@@ -87,20 +86,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if(user==null){
            user=createUserWithPhone(phone);
         }
-        // 5. 生成登录 token。
-        String token = UUID.randomUUID().toString(true);
-
-        // 6. 把用户信息转成 UserDTO。
+        // 5. 把用户信息转成 UserDTO。
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
-        // Redis Hash 只存字符串，这里把 UserDTO 字段统一转成字符串，避免类型序列化问题。
-        Map<String, Object> map = BeanUtil.beanToMap(userDTO, new HashMap<>(),
-                CopyOptions.create().setIgnoreNullValue(true)
-                        .setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
-        // 7. 把 token 和用户信息存到 Redis。
-        String tokenKey=RedisConstants.LOGIN_USER_KEY+token;
-        stringRedisTemplate.opsForHash().putAll(tokenKey,map);
-        stringRedisTemplate.expire(tokenKey, RedisConstants.LOGIN_USER_TTL, TimeUnit.DAYS);
-        // 8. 返回 token。
+        // 6. 生成 JWT；用户信息和过期时间写入 token，由拦截器校验签名和有效期。
+        String token = jwtUtils.createToken(userDTO);
+        // 7. 返回 token。
         return Result.ok(token);
     }
 
@@ -112,8 +102,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
             UserHolder.removeUser();
             return Result.ok();
         }
-        // 2. 删除 Redis 里的登录信息。
-        stringRedisTemplate.delete(RedisConstants.LOGIN_USER_KEY + token);
+        // 2. JWT 本身无法服务端删除，退出登录时把当前 token 放进 Redis 黑名单直到自然过期。
+        String jwt = jwtUtils.normalizeToken(token);
+        if (StrUtil.isNotBlank(jwt)) {
+            stringRedisTemplate.opsForValue().set(
+                    RedisConstants.LOGIN_TOKEN_BLACKLIST_KEY + jwt,
+                    "1",
+                    RedisConstants.LOGIN_USER_TTL,
+                    TimeUnit.DAYS
+            );
+        }
         // 3. 清理当前线程里的用户信息。
         UserHolder.removeUser();
         return Result.ok();

@@ -10,12 +10,14 @@ import com.hmdp.entity.SeckillVoucher;
 import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherService;
 import com.hmdp.utils.RedisConstants;
+import com.hmdp.vo.VoucherVO;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.hmdp.utils.RedisConstants.SECKILL_STOCK_KEY;
 
@@ -34,9 +36,15 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
     // 查询店铺优惠券列表
     @Override
     public Result queryVoucherOfShop(Long shopId) {
+        return Result.ok(listVoucherVOByShop(shopId));
+    }
+
+    // 查询店铺优惠券列表并转换成前端视图对象
+    @Override
+    public List<VoucherVO> listVoucherVOByShop(Long shopId) {
         // 通过自定义 SQL 同时查询普通优惠券和秒杀优惠券扩展信息。
         List<Voucher> vouchers = getBaseMapper().queryVoucherOfShop(shopId);
-        return Result.ok(vouchers);
+        return vouchers.stream().map(VoucherVO::from).collect(Collectors.toList());
     }
 
     // 新增秒杀优惠券

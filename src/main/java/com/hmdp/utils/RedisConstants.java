@@ -9,6 +9,8 @@ public class RedisConstants {
     public static final Long LOGIN_CODE_TTL = 2L;
     // 登录用户信息的 Redis key 前缀
     public static final String LOGIN_USER_KEY = "login:token:";
+    // JWT 退出登录后的黑名单 key 前缀
+    public static final String LOGIN_TOKEN_BLACKLIST_KEY = "login:token:blacklist:";
     // 登录用户信息过期时间，单位天
     public static final Long LOGIN_USER_TTL = 30L;
 
