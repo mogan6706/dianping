@@ -17,8 +17,8 @@ import java.util.UUID;
 @Slf4j
 // 控制器：负责接收前端请求并直接返回 HTTP 响应
 @RestController
-// 公共路径前缀：upload
-@RequestMapping("upload")
+// 公共路径前缀：/blog/images
+@RequestMapping("/blog/images")
 // 控制器类：负责接收请求、调用业务层并返回结果
 public class BlogImageController {
 
@@ -27,7 +27,7 @@ public class BlogImageController {
     private String imageUploadDir;
 
     // 上传博客图片
-    @PostMapping("blog")
+    @PostMapping
     public Result uploadBlogImage(@RequestParam("file") MultipartFile file) {
         try {
             // 获取原始文件名称
@@ -45,7 +45,7 @@ public class BlogImageController {
     }
 
     // 删除博客图片
-    @GetMapping("/blog/delete")
+    @DeleteMapping
     public Result deleteBlogImage(@RequestParam("name") String imagePath) {
         String relativePath = StrUtil.removePrefix(imagePath, "/");
         File imageFile = new File(imageUploadDir, relativePath);

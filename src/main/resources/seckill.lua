@@ -1,12 +1,16 @@
--- 文件说明：Redis Lua 脚本，把秒杀预检里的库存判断、重复下单判断和预扣库存合并成一个原子操作。
+-- 文件说明：Redis Lua 脚本，把秒杀资格判断、预扣库存和一人一单标记合并成一个原子操作。
+
+-- 返回码约定：
+--  0 = 成功，已预扣 Redis 库存并记录用户下单标记
+-- -1 = Redis 中没有该优惠券库存
+--  1 = 库存不足
+--  2 = 当前用户已经下过单
 
 -- 1.参数列表
 --1.1.优惠券id
 local voucherId=ARGV[1]
 --1.2.用户id
 local userId=ARGV[2]
---1.3.订单id
-local orderId=ARGV[3]
 
 -- 2.数据key
 --2.1.库存key
@@ -35,5 +39,5 @@ end
 redis.call('incrby',stockKey,-1)
 -- 3.6.记录用户已下单
 redis.call('sadd',orderKey,userId)
--- 3.7.写入 Redis Stream
-redis.call('xadd','stream.orders','*', 'userId',userId,'voucherId',voucherId,'id',orderId)
+-- 3.7.返回成功，订单消息由 Java 发送到 RabbitMQ
+return 0

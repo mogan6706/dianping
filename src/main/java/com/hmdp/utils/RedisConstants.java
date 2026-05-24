@@ -27,6 +27,8 @@ public class RedisConstants {
 
     // 秒杀库存的 Redis key 前缀
     public static final String SECKILL_STOCK_KEY = "seckill:stock:";
+    // 秒杀下单用户集合的 Redis key 前缀
+    public static final String SECKILL_ORDER_KEY = "seckill:order:";
     // 博客点赞集合的 Redis key 前缀
     public static final String BLOG_LIKED_KEY = "blog:liked:";
     // 关注推送收件箱的 Redis key 前缀

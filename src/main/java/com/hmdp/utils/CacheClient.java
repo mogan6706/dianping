@@ -28,13 +28,13 @@ public class CacheClient {
         this.stringRedisTemplate = stringRedisTemplate;
     }
 
-    // 写入普通缓存
+    // 写入普通缓存，到期会delete
     public void set(String key, Object value, Long time, TimeUnit unit){
         // 普通写缓存。
         stringRedisTemplate.opsForValue().set(key, JSONUtil.toJsonStr(value),time,unit);
     }
 
-    // 写入带逻辑过期时间的缓存
+    // 写入带逻辑过期时间的缓存，到期不会delete
     public void setWithLogicalExpire(String key,Object value,Long time,TimeUnit unit){
         // 逻辑过期把真实数据和过期时间一起存入 Redis，Redis key 本身不设置 TTL。
         RedisData redisData = new RedisData();
@@ -43,7 +43,8 @@ public class CacheClient {
         stringRedisTemplate.opsForValue().set(key,JSONUtil.toJsonStr(redisData));
     }
 
-    // 按互斥锁方案查询数据，同时用空值缓存处理缓存穿透
+    // 按互斥锁方案查询数据，同时用空值缓存处理缓存穿透。
+    // 数据库更新或删除后，需要删除对应 Redis 缓存；若新增的数据可能存在空值缓存，也应删除对应 key。
     public <R,ID> R queryWithMutex(
             String keyPrefix, ID id, Class<R> type, Function<ID,R> dbFallback,Long time,TimeUnit unit){
         // 1. 先查 Redis，普通 JSON 表示真实数据，空字符串表示数据库不存在。
@@ -54,8 +55,8 @@ public class CacheClient {
             return JSONUtil.toBean(json, type);
 
         }
-        // 3. 命中空值缓存，说明数据库也没有该数据，直接返回 null。
         if(json!=null){
+            // 3. 命中空值缓存，说明之前已确认数据库不存在该数据，直接返回 null。
             return null;
         }
         // 4. Redis 完全未命中时，通过互斥锁限制只有一个线程回源数据库。
@@ -103,6 +104,7 @@ public class CacheClient {
 
     }
 
+    // 如果采用该方案，必须在更新数据库时，同步写入redis，且启动app的时候预热redis
     // 异步重建缓存时使用的线程池
     private static final ExecutorService CACHE_REBUILD_EXECUTOR= Executors.newFixedThreadPool(10);
     // 按逻辑过期方案查询数据
@@ -111,9 +113,8 @@ public class CacheClient {
         // 1. 逻辑过期方案要求缓存提前存在；Redis 未命中时无法返回旧数据。
         String key=keyPrefix+id;
         String json = stringRedisTemplate.opsForValue().get(key);
-        if(StrUtil.isBlank(json)) { //判断字符串既不为null，也不是空字符串(""),且也不是空白字符
+        if(StrUtil.isBlank(json)) { // Redis 未命中或缓存为空
             return null;
-
         }
 
         // 2. RedisData 中同时包含业务数据和逻辑过期时间。
@@ -133,7 +134,11 @@ public class CacheClient {
                 try {
                    // 后台线程查询数据库并刷新 RedisData.expireTime。
                     R r1= dbFallback.apply(id);
-                    this.setWithLogicalExpire(key,r1,time,unit);
+                    if (r1 == null) {
+                        stringRedisTemplate.delete(key);
+                    } else {
+                        this.setWithLogicalExpire(key, r1, time, unit);
+                    }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }finally {

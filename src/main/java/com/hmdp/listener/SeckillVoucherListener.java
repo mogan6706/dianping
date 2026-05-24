@@ -4,9 +4,7 @@ package com.hmdp.listener;
 
 import cn.hutool.json.JSONUtil;
 import com.hmdp.entity.VoucherOrder;
-import com.hmdp.service.impl.SeckillVoucherServiceImpl;
-import com.hmdp.service.impl.VoucherOrderServiceImpl;
-import com.rabbitmq.client.Channel;
+import com.hmdp.service.IVoucherOrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
@@ -20,47 +18,31 @@ import javax.annotation.Resource;
 @RequiredArgsConstructor
 @Slf4j
 public class SeckillVoucherListener {
-    // RabbitMQ 秒杀订单消费者。
+    // 注入订单业务接口，消费者通过 Service 的事务方法完成落库。
     @Resource
-    SeckillVoucherServiceImpl seckillVoucherService;
-    // 注入对象
-    @Resource
-    VoucherOrderServiceImpl voucherOrderService;
-// 消费普通队列里的秒杀消息
-@RabbitListener(queues = "QA")
-    public void receivedA(Message message, Channel channel)throws Exception{
+    private IVoucherOrderService voucherOrderService;
+
+    // 消费普通队列里的秒杀消息
+    @RabbitListener(queues = "QA")
+    public void receivedA(Message message){
         // 1. 解析消息。
         String msg=new String(message.getBody());
         log.info("正常队列:");
         VoucherOrder voucherOrder = JSONUtil.toBean(msg, VoucherOrder.class);
         log.info(voucherOrder.toString());
-        // 2. 普通队列消息表示订单仍在有效支付时间内，先保存订单。
-        voucherOrderService.save(voucherOrder);
-        // 3. 扣减数据库库存时带 stock > 0 条件，避免库存变成负数。
-        Long voucherId=voucherOrder.getVoucherId();
-        seckillVoucherService.update()
-                .setSql("stock = stock - 1") // set stock = stock - 1
-                .eq("voucher_id", voucherId).gt("stock", 0) // where id = ? and stock > 0
-                .update();
-
+        // 2. 通过 Service 创建订单，统一复用事务、一人一单校验和数据库库存扣减逻辑。
+        voucherOrderService.createVoucherOrder(voucherOrder);
     }
 
     // 消费死信队列里的超时消息
     @RabbitListener(queues = "QD")
-    public void receivedD(Message message)throws Exception{
+    public void receivedD(Message message){
         // 1. 死信队列接收超时或被拒绝的消息；这里仍按订单消息做兜底处理。
         log.info("死信队列:");
         String msg=new String(message.getBody());
         VoucherOrder voucherOrder = JSONUtil.toBean(msg, VoucherOrder.class);
         log.info(voucherOrder.toString());
-        // 2. 保存订单并扣减库存，逻辑与普通队列保持一致。
-        voucherOrderService.save(voucherOrder);
-
-        Long voucherId=voucherOrder.getVoucherId();
-        seckillVoucherService.update()
-                .setSql("stock = stock - 1") // set stock = stock - 1
-                .eq("voucher_id", voucherId).gt("stock", 0) // where id = ? and stock > 0
-                .update();
-
+        // 2. 死信消息仍走同一个事务方法，避免和普通队列出现两套落库逻辑。
+        voucherOrderService.createVoucherOrder(voucherOrder);
     }
 }

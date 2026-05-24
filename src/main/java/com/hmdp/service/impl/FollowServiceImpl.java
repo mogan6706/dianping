@@ -8,7 +8,7 @@ import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.Follow;
 import com.hmdp.mapper.FollowMapper;
-import com.hmdp.service.IBlogImageService;
+import com.hmdp.service.IFollowService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
 // 业务类：负责处理当前模块的核心业务逻辑
 @Service
 // 业务实现类：真正编排当前模块的业务流程
-public class BlogImageServiceImpl extends ServiceImpl<FollowMapper, Follow> implements IBlogImageService {
+public class FollowServiceImpl extends ServiceImpl<FollowMapper, Follow> implements IFollowService {
 
     // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource

@@ -4,7 +4,7 @@ package com.hmdp.controller;
 
 
 import com.hmdp.dto.Result;
-import com.hmdp.service.IBlogImageService;
+import com.hmdp.service.IFollowService;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -17,7 +17,7 @@ import javax.annotation.Resource;
 public class FollowController {
     // 注入 followService（IFollowService）
     @Resource
-    private IBlogImageService followService;
+    private IFollowService followService;
     // 关注或取关用户
     @PutMapping("/{id}/{shouldFollow}")
     public Result follow(@PathVariable("id") Long followUserId,@PathVariable("shouldFollow") Boolean shouldFollow){

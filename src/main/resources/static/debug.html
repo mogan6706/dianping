@@ -553,13 +553,13 @@
 
                     <div class="group">
                         <h4>BlogImageController</h4>
-                        <p>`/upload/**`：上传博客图片、删除博客图片。上传要先选文件。</p>
+                        <p>`/blog/images`：上传博客图片、删除博客图片。上传要先选文件。</p>
                         <div class="file-row">
                             <input id="uploadFile" type="file" accept="image/*">
                         </div>
                         <div class="button-grid two" style="margin-top: 12px;">
-                            <button class="accent" data-action="upload-blog">POST /upload/blog</button>
-                            <button class="ghost" data-action="upload-delete">GET /upload/blog/delete</button>
+                            <button class="accent" data-action="upload-blog">POST /blog/images</button>
+                            <button class="ghost" data-action="upload-delete">DELETE /blog/images</button>
                         </div>
                     </div>
 
@@ -810,9 +810,9 @@
                 return request(`/voucher-order/seckill/${encodeURIComponent(voucherIdInput.value.trim())}`, { method: "POST" });
 
             case "upload-blog":
-                return upload("/upload/blog");
+                return upload("/blog/images");
             case "upload-delete":
-                return request(`/upload/blog/delete${queryString({ name: deleteFileNameInput.value.trim() })}`);
+                return request(`/blog/images${queryString({ name: deleteFileNameInput.value.trim() })}`, { method: "DELETE" });
 
             default:
                 renderResult("LOCAL", action, 400, { error: "未知操作" });

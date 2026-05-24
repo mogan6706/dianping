@@ -29,7 +29,6 @@ public class MvcConfig implements WebMvcConfigurer {
                 // 以下路径不需要登录即可访问
                 .excludePathPatterns(
                         "/user/login",     // 登录接口
-                        "/upload/**",      // 上传接口
                         "/voucher/**",     // 优惠券接口
                         "/user/code",      // 验证码接口
                         "/shop/**",        // 商铺接口

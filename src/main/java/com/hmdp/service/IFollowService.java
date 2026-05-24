@@ -15,7 +15,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @since 2021-12-22
  */
 // 业务接口：先定义当前模块要提供哪些能力
-public interface IBlogImageService extends IService<Follow> {
+public interface IFollowService extends IService<Follow> {
 
     Result follow(Long followUserId, Boolean shouldFollow);
 

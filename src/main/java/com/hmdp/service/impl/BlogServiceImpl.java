@@ -14,7 +14,7 @@ import com.hmdp.entity.User;
 import com.hmdp.mapper.BlogMapper;
 import com.hmdp.service.IBlogService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.hmdp.service.IBlogImageService;
+import com.hmdp.service.IFollowService;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
@@ -43,7 +43,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
 
     // 注入 followService（IFollowService）
     @Resource
-    private IBlogImageService followService;
+    private IFollowService followService;
 
     // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource
