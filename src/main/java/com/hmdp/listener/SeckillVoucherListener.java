@@ -29,8 +29,8 @@ public class SeckillVoucherListener {
         log.info("正常队列:");
         VoucherOrder voucherOrder = JSONUtil.toBean(msg, VoucherOrder.class);
         log.info(voucherOrder.toString());
-        // 2. 通过 Service 创建订单，统一复用事务、一人一单校验和数据库库存扣减逻辑。
-        voucherOrderService.createVoucherOrder(voucherOrder);
+        // 2. 先按用户维度加分布式锁，再进入事务落库，保证集群下一人一单。
+        voucherOrderService.handleVoucherOrder(voucherOrder);
     }
 
     // 消费死信队列里的超时消息
@@ -39,5 +39,9 @@ public class SeckillVoucherListener {
         // 死信队列只记录异常消息，不直接创建订单；补偿或重试应按明确策略单独处理。
         String msg = new String(message.getBody(), StandardCharsets.UTF_8);
         log.error("秒杀订单进入死信队列: {}", msg);
+        VoucherOrder voucherOrder = JSONUtil.toBean(msg, VoucherOrder.class);
+        log.error(voucherOrder.toString());
+        // 2. 先按用户维度加分布式锁，再进入事务落库，保证集群下一人一单。
+        voucherOrderService.handleVoucherOrder(voucherOrder);
     }
 }

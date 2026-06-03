@@ -11,6 +11,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -45,64 +50,64 @@ public class CacheClient {
 
     // 按互斥锁方案查询数据，同时用空值缓存处理缓存穿透。
     // 数据库更新或删除后，需要删除对应 Redis 缓存；若新增的数据可能存在空值缓存，也应删除对应 key。
-    public <R,ID> R queryWithMutex(
-            String keyPrefix, ID id, Class<R> type, Function<ID,R> dbFallback,Long time,TimeUnit unit){
-        // 1. 先查 Redis，普通 JSON 表示真实数据，空字符串表示数据库不存在。
-        String key=keyPrefix+id;
-        String json = stringRedisTemplate.opsForValue().get(key);
-        if(StrUtil.isNotBlank(json)) { //判断字符串既不为null，也不是空字符串(""),且也不是空白字符
-            // 2. 命中真实缓存，直接反序列化返回。
-            return JSONUtil.toBean(json, type);
-
-        }
-        if(json!=null){
-            // 3. 命中空值缓存，说明之前已确认数据库不存在该数据，直接返回 null。
-            return null;
-        }
-        // 4. Redis 完全未命中时，通过互斥锁限制只有一个线程回源数据库。
-        String lockKey = buildLockKey(keyPrefix, id);
-        R r = null;
-        boolean isLock = false;
-        try {
-            isLock = tryLock(lockKey);
-            if(!isLock){
-                // 5. 未抢到锁说明其他线程正在重建缓存，短暂休眠后递归重试。
-                Thread.sleep(50);
-                return queryWithMutex(keyPrefix, id, type, dbFallback, time, unit);
-            }
-
-            // 6. 获取锁成功后再次查 Redis，避免等待期间缓存已被其他线程写回。
-            json = stringRedisTemplate.opsForValue().get(key);
-            if(StrUtil.isNotBlank(json)) {
-                return JSONUtil.toBean(json, type);
-            }
-            if(json!=null){
-                return null;
-            }
-
-            // 7. 真正回源数据库。
-            r = dbFallback.apply(id);
-            if(r==null){
-                // 8. 数据库不存在也写入短 TTL 空值，防止同一个非法 id 反复穿透数据库。
-                stringRedisTemplate.opsForValue().set(key,"",RedisConstants.CACHE_NULL_TTL,TimeUnit.MINUTES);
-                return null;
-            }
-            // 9. 数据库存在则写普通缓存，并设置 Redis 真实 TTL。
-           this.set(key,r,time,unit);
-        } catch (InterruptedException e) {
-            // 恢复中断标记，避免吞掉线程中断信号。
-            Thread.currentThread().interrupt();
-            throw new RuntimeException(e);
-        } finally {
-            // 只有当前线程真正拿到锁时才释放，避免误删其他线程的锁。
-            if(isLock){
-                unLock(lockKey);
-            }
-        }
-
-        return r;
-
-    }
+//    public <R,ID> R queryWithMutex(
+//            String keyPrefix, ID id, Class<R> type, Function<ID,R> dbFallback,Long time,TimeUnit unit){
+//        // 1. 先查 Redis，普通 JSON 表示真实数据，空字符串表示数据库不存在。
+//        String key=keyPrefix+id;
+//        String json = stringRedisTemplate.opsForValue().get(key);
+//        if(StrUtil.isNotBlank(json)) { //判断字符串既不为null，也不是空字符串(""),且也不是空白字符
+//            // 2. 命中真实缓存，直接反序列化返回。
+//            return JSONUtil.toBean(json, type);
+//
+//        }
+//        if(json!=null){
+//            // 3. 命中空值缓存，说明之前已确认数据库不存在该数据，直接返回 null。
+//            return null;
+//        }
+//        // 4. Redis 完全未命中时，通过互斥锁限制只有一个线程回源数据库。
+//        String lockKey = buildLockKey(keyPrefix, id);
+//        R r = null;
+//        boolean isLock = false;
+//        try {
+//            isLock = tryLock(lockKey);
+//            if(!isLock){
+//                // 5. 未抢到锁说明其他线程正在重建缓存，短暂休眠后递归重试。
+//                Thread.sleep(50);
+//                return queryWithMutex(keyPrefix, id, type, dbFallback, time, unit);
+//            }
+//
+//            // 6. 获取锁成功后再次查 Redis，避免等待期间缓存已被其他线程写回。
+//            json = stringRedisTemplate.opsForValue().get(key);
+//            if(StrUtil.isNotBlank(json)) {
+//                return JSONUtil.toBean(json, type);
+//            }
+//            if(json!=null){
+//                return null;
+//            }
+//
+//            // 7. 真正回源数据库。
+//            r = dbFallback.apply(id);
+//            if(r==null){
+//                // 8. 数据库不存在也写入短 TTL 空值，防止同一个非法 id 反复穿透数据库。
+//                stringRedisTemplate.opsForValue().set(key,"",RedisConstants.CACHE_NULL_TTL,TimeUnit.MINUTES);
+//                return null;
+//            }
+//            // 9. 数据库存在则写普通缓存，并设置 Redis 真实 TTL。
+//           this.set(key,r,time,unit);
+//        } catch (InterruptedException e) {
+//            // 恢复中断标记，避免吞掉线程中断信号。
+//            Thread.currentThread().interrupt();
+//            throw new RuntimeException(e);
+//        } finally {
+//            // 只有当前线程真正拿到锁时才释放，避免误删其他线程的锁。
+//            if(isLock){
+//                unLock(lockKey);
+//            }
+//        }
+//
+//        return r;
+//
+//    }
 
     // 如果采用该方案，必须在更新数据库时，同步写入redis，且启动app的时候预热redis
     // 异步重建缓存时使用的线程池
@@ -152,6 +157,89 @@ public class CacheClient {
         // 5. 无论是否抢到锁，都立即返回旧数据，保证热点请求低延迟。
         return shop;
 
+    }
+
+    // 批量按逻辑过期方案查询数据，适合列表/搜索接口拿到 id 后批量查详情。
+    public <R, ID> Map<ID, R> queryWithLogicalExpireBatch(
+            String keyPrefix,
+            List<ID> ids,
+            Class<R> type,
+            Function<Collection<ID>, Map<ID, R>> dbFallback,
+            Long time,
+            TimeUnit unit
+    ) {
+        Map<ID, R> result = new HashMap<>();
+        if (ids == null || ids.isEmpty()) {
+            return result;
+        }
+
+        List<String> keys = new ArrayList<>(ids.size());
+        for (ID id : ids) {
+            keys.add(keyPrefix + id);
+        }
+
+        List<String> jsonList = stringRedisTemplate.opsForValue().multiGet(keys);
+        List<ID> missIds = new ArrayList<>();
+        List<ID> rebuildIds = new ArrayList<>();
+
+        for (int i = 0; i < ids.size(); i++) {
+            ID id = ids.get(i);
+            String json = jsonList == null ? null : jsonList.get(i);
+            if (StrUtil.isBlank(json)) {
+                missIds.add(id);
+                continue;
+            }
+
+            RedisData redisData = JSONUtil.toBean(json, RedisData.class);
+            R value = JSONUtil.toBean((JSONObject) redisData.getData(), type);
+            result.put(id, value);
+
+            LocalDateTime expireTime = redisData.getExpireTime();
+            if (expireTime != null && expireTime.isBefore(LocalDateTime.now())) {
+                String lockKey = buildLockKey(keyPrefix, id);
+                if (tryLock(lockKey)) {
+                    rebuildIds.add(id);
+                }
+            }
+        }
+
+        if (!missIds.isEmpty()) {
+            Map<ID, R> dbResult = dbFallback.apply(missIds);
+            if (dbResult != null) {
+                for (ID id : missIds) {
+                    R value = dbResult.get(id);
+                    if (value == null) {
+                        continue;
+                    }
+                    result.put(id, value);
+                    setWithLogicalExpire(keyPrefix + id, value, time, unit);
+                }
+            }
+        }
+
+        if (!rebuildIds.isEmpty()) {
+            CACHE_REBUILD_EXECUTOR.submit(() -> {
+                try {
+                    Map<ID, R> dbResult = dbFallback.apply(rebuildIds);
+                    for (ID id : rebuildIds) {
+                        R value = dbResult == null ? null : dbResult.get(id);
+                        if (value == null) {
+                            stringRedisTemplate.delete(keyPrefix + id);
+                        } else {
+                            setWithLogicalExpire(keyPrefix + id, value, time, unit);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.error("批量重建逻辑过期缓存失败，keyPrefix={}，ids={}", keyPrefix, rebuildIds, e);
+                } finally {
+                    for (ID id : rebuildIds) {
+                        unLock(buildLockKey(keyPrefix, id));
+                    }
+                }
+            });
+        }
+
+        return result;
     }
     // 尝试获取锁
     private boolean tryLock(String key){

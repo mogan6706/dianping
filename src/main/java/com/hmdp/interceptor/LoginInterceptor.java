@@ -1,5 +1,3 @@
-// 文件说明：登录校验拦截器，专门拦截必须登录但当前用户未登录的请求。
-
 package com.hmdp.interceptor;
 
 import cn.hutool.core.bean.BeanUtil;
@@ -21,18 +19,17 @@ import javax.servlet.http.HttpSession;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-// 拦截器类：请求进入 Controller 前会先经过这里
 public class LoginInterceptor implements HandlerInterceptor {
-    // 拦截未登录请求
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-       // 1. 判断 ThreadLocal 里是否有当前用户。
+        //1.判断是否需要拦截（ThreadLocal）中是否有用户
         if(UserHolder.getUser()==null){
-            // 2. 没有用户，返回 401。
+            //没有需要拦截，设置状态码
             response.setStatus(401);
+            //拦截
             return false;
         }
-        // 3. 有用户则放行。
+        //由用户放行
         return true;
     }
 }

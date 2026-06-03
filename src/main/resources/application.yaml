@@ -61,6 +61,9 @@
 
   # hmdp：项目自定义配置。
   hmdp:
+    elasticsearch:
+      # ES 地址。生产环境可以配置多个，用逗号分隔，例如 http://es-1:9200,http://es-2:9200
+      uris: http://localhost:9200
     upload:
       # image-dir：博客图片上传目录。前端访问图片时，需确保该目录被静态服务器映射。
       image-dir: ./uploads/imgs

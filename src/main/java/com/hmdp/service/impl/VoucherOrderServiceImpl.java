@@ -12,7 +12,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.RedisIdWorker;
 import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -44,6 +47,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private RedissonClient redissonClient;
+
+    @Resource
+    private ApplicationContext applicationContext;
 
     private static final DefaultRedisScript<Long> SECKILL_SCRIPT;
     static {
@@ -94,7 +103,26 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         return Result.ok(orderId);
     }
 
+    // 带 Redisson 用户锁处理异步订单，保证集群下同一用户串行创建订单。
+    @Override
+    public void handleVoucherOrder(VoucherOrder voucherOrder) {
+        Long userId = voucherOrder.getUserId();
+        RLock lock = redissonClient.getLock("lock:order:" + userId);
+        boolean isLock = lock.tryLock();
+        if (!isLock) {
+            log.error("不允许重复下单，userId={}", userId);
+            return;
+        }
+        try {
+            IVoucherOrderService proxy = applicationContext.getBean(IVoucherOrderService.class);
+            proxy.createVoucherOrder(voucherOrder);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     // 创建秒杀订单
+    @Override
     @Transactional
     public void createVoucherOrder(VoucherOrder voucherOrder) {
         // 1. 数据库层面再次校验一人一单，兜底防止重复消费或绕过 Redis。
@@ -119,4 +147,5 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         // 3. 库存扣减成功后保存订单记录。
         save(voucherOrder);
     }
-}
+
+    }

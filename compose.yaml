@@ -1,4 +1,4 @@
-# 文件说明：Docker Compose 编排文件，用来一键启动本项目依赖的 MySQL、Redis 和 RabbitMQ 服务。
+# 文件说明：Docker Compose 编排文件，用来一键启动本项目依赖的 MySQL、Redis、RabbitMQ 和 Elasticsearch 服务。
 
 services:
   # mysql：MySQL 容器配置。
@@ -62,8 +62,30 @@ services:
       # rabbitmq-data：持久化 RabbitMQ 数据目录。
       - rabbitmq-data:/var/lib/rabbitmq
 
+  # elasticsearch：Elasticsearch 搜索服务，用于商铺名称搜索。
+  elasticsearch:
+    image: elasticsearch:7.17.18
+    container_name: hmdp-elasticsearch
+    restart: unless-stopped
+    environment:
+      # discovery.type=single-node：本地开发使用单节点模式。
+      discovery.type: single-node
+      # xpack.security.enabled=false：关闭安全认证，方便本地 Spring Boot 直接连接。
+      xpack.security.enabled: "false"
+      # ES_JAVA_OPTS：限制 JVM 堆内存，避免本地开发占用过高。
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      # 9200:9200：REST API 端口，Spring Boot 通过这个端口访问 ES。
+      - "9200:9200"
+      # 9300:9300：集群内部通信端口，本地单节点一般用不到，但保留方便调试。
+      - "9300:9300"
+    volumes:
+      # elasticsearch-data：持久化 ES 索引数据。
+      - elasticsearch-data:/usr/share/elasticsearch/data
+
 # volumes：命名卷声明。
 volumes:
   mysql-data:
   redis-data:
   rabbitmq-data:
+  elasticsearch-data:

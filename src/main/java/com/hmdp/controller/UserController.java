@@ -20,7 +20,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpSession;
 
 @Slf4j
 // 控制器：负责接收前端请求并直接返回 HTTP 响应
@@ -44,14 +43,14 @@ public class UserController {
 
     // 发送登录验证码
     @PostMapping("code")
-    public Result sendCode(@RequestParam("phone") String phone, HttpSession session) {
-        return userService.sendCode(phone,session);
+    public Result sendCode(@RequestParam("phone") String phone) {
+        return userService.sendCode(phone);
     }
 
     // 用户登录并返回 token
     @PostMapping("/login")
-    public Result login(@RequestBody LoginFormDTO loginForm, HttpSession session){
-        return userService.login(loginForm,session);
+    public Result login(@RequestBody LoginFormDTO loginForm){
+        return userService.login(loginForm);
     }
 
     // 退出登录

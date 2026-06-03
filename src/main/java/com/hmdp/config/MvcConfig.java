@@ -4,7 +4,6 @@ package com.hmdp.config;
 
 import com.hmdp.interceptor.LoginInterceptor;
 import com.hmdp.interceptor.RefreshTokenInterceptor;
-import com.hmdp.utils.JwtUtils;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -19,9 +18,6 @@ public class MvcConfig implements WebMvcConfigurer {
     // 注入 Redis 操作对象
     @Resource
     private StringRedisTemplate stringRedisTemplate;
-    // 注入 JWT 工具
-    @Resource
-    private JwtUtils jwtUtils;
 
     // 注册项目里的拦截器
     @Override
@@ -54,7 +50,7 @@ public class MvcConfig implements WebMvcConfigurer {
                 .order(1);
 
         // 注册 token 刷新拦截器
-        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate, jwtUtils))
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate))
 
                 // 拦截所有请求
                 .addPathPatterns("/**")

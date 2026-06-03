@@ -1,8 +1,8 @@
-// 文件说明：UserServiceImpl 业务实现类，真正编排 User 模块的业务流程。
-
 package com.hmdp.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
+import cn.hutool.core.lang.UUID;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
@@ -21,42 +21,49 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpSession;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import static com.hmdp.utils.RedisConstants.USER_SIGN_KEY;
 
-// 业务类：负责处理当前模块的核心业务逻辑
+/**
+ * <p>
+ * 服务实现类
+ * </p>
+ *
+ * @author 虎哥
+ * @since 2021-12-22
+ */
 @Service
 @Slf4j
-// 业务实现类：真正编排当前模块的业务流程
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IUserService {
 
-    // 注入 stringRedisTemplate（StringRedisTemplate）
     @Resource
     private StringRedisTemplate stringRedisTemplate;
-    // 注入 JWT 工具
-    @Resource
-    private JwtUtils jwtUtils;
-    // 发送登录验证码
+    /**
+     * 发送验证码
+     * @param phone
+     * @return
+     */
     @Override
-    public Result sendCode(String phone, HttpSession session) {
-        // 1. 校验手机号格式。
+    public Result sendCode(String phone) {
+        //1.校验手机号
         if(RegexUtils.isPhoneInvalid(phone)) {
-            // 2. 格式不对，直接返回。
+            //2.不符合，返回错误
             return Result.fail("手机号格式错误");
         }
 
-        // 3. 生成 6 位验证码。
+        //3.符合，生成验证码
         String code = RandomUtil.randomNumbers(6);
-        // 4. 把验证码存到 Redis。
-       stringRedisTemplate.opsForValue().set(RedisConstants.LOGIN_CODE_KEY +phone,code,2, TimeUnit.MINUTES);
-        // 5. 当前项目把验证码打印到日志里。
+        //4.保存验证码到redis
+        stringRedisTemplate.opsForValue().set(RedisConstants.LOGIN_CODE_KEY +phone,code,2, TimeUnit.MINUTES);
+        //5.发送验证码
         log.info("短信验证码发送成功：{}",code);
 
         return Result.ok();
@@ -64,85 +71,97 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
     }
 
 
-    // 登录并返回 token
+    /**
+     * 登录
+     * @param loginForm
+     * @return
+     */
     @Override
-    public Result login(LoginFormDTO loginForm, HttpSession session) {
+    public Result login(LoginFormDTO loginForm) {
         String code = loginForm.getCode();
         String phone = loginForm.getPhone();
-        // 1. 校验手机号格式。
+        //1.校验手机号
         if(RegexUtils.isPhoneInvalid(phone)) {
+            //2.不符合，返回错误
             return Result.fail("手机号格式错误");
         }
-        // 2. 去 Redis 校验验证码。
+        //3.校验验证码
         String cacheCode = stringRedisTemplate.opsForValue().get(RedisConstants.LOGIN_CODE_KEY+phone);
         if(cacheCode==null||!cacheCode.equals(code)){
-           return Result.fail("验证码不一致，请重新输入");
-       }
+            return Result.fail("验证码不一致，请重新输入");
+        }
 
-        // 3. 根据手机号查询用户。
+        //4.一致，根据手机号查询用户
         User user = query().eq("phone",phone).one();
 
-        // 4. 不存在则创建新用户。
+        //5.判断用户是否存在
+
+        //6.不存在，创建新用户，保存到数据库
         if(user==null){
-           user=createUserWithPhone(phone);
+            user=createUserWithPhone(phone);
         }
-        // 5. 把用户信息转成 UserDTO。
+        //7.存在 保存到redis
+        //7.1 生成个token作为登陆令牌
+        String token = UUID.randomUUID().toString(true);
+
+        //7.2 将user对象转为Hash存储
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
-        // 6. 生成 JWT；用户信息和过期时间写入 token，由拦截器校验签名和有效期。
-        String token = jwtUtils.createToken(userDTO);
-        // 7. 返回 token。
+        Map<String, Object> map = BeanUtil.beanToMap(userDTO, new HashMap<>(),
+                CopyOptions.create().setIgnoreNullValue(true)
+                        .setFieldValueEditor((fieldName, fieldValue) -> fieldValue.toString()));
+        //7.3 存储
+        String tokenKey=RedisConstants.LOGIN_USER_KEY+token;
+        stringRedisTemplate.opsForHash().putAll(tokenKey,map);
+        stringRedisTemplate.expire(tokenKey,30,TimeUnit.MINUTES);
+        //8.返回token
         return Result.ok(token);
     }
 
-    // 退出登录并删除 Redis 里的 token
     @Override
     public Result logout(String token) {
-        // 1. 没带 token 时，直接视为退出完成。
         if (StrUtil.isBlank(token)) {
             UserHolder.removeUser();
             return Result.ok();
         }
-        // 2. JWT 本身无法服务端删除，退出登录时把当前 token 放进 Redis 黑名单直到自然过期。
-        String jwt = jwtUtils.normalizeToken(token);
-        if (StrUtil.isNotBlank(jwt)) {
-            stringRedisTemplate.opsForValue().set(
-                    RedisConstants.LOGIN_TOKEN_BLACKLIST_KEY + jwt,
-                    "1",
-                    RedisConstants.LOGIN_USER_TTL,
-                    TimeUnit.DAYS
-            );
+        String normalizedToken = token.trim();
+        if (normalizedToken.regionMatches(true, 0, "Bearer ", 0, 7)) {
+            normalizedToken = normalizedToken.substring(7).trim();
         }
-        // 3. 清理当前线程里的用户信息。
+        if (StrUtil.isNotBlank(normalizedToken)) {
+            stringRedisTemplate.delete(RedisConstants.LOGIN_USER_KEY + normalizedToken);
+        }
         UserHolder.removeUser();
         return Result.ok();
     }
 
-    // 记录当天签到
     @Override
     public Result sign() {
-        // 1. 获取当前登录用户。
+        //1.获取当前登录用户
         Long userId = UserHolder.getUser().getId();
-        // 2. 拼接签到位图 key。
+        //2.获取日期
         LocalDateTime now = LocalDateTime.now();
+        //3.拼接key
         String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
         String key = USER_SIGN_KEY + userId + keySuffix;
-        // 3. 把今天对应的 bit 置为 1。
+        //4.获取今天是这个月的第几天
         int dayOfMonth = now.getDayOfMonth();
+        //5.写入redis setbit key offset 1
         stringRedisTemplate.opsForValue().setBit(key,dayOfMonth-1,true);
         return Result.ok();
     }
 
-    // 统计连续签到天数
     @Override
     public Result signCount() {
-        // 1. 获取当前登录用户和当前年月。
+        //1.获取当前登录用户
         Long userId = UserHolder.getUser().getId();
+        //2.获取日期
         LocalDateTime now = LocalDateTime.now();
+        //3.拼接key
         String keySuffix = now.format(DateTimeFormatter.ofPattern(":yyyyMM"));
         String key = USER_SIGN_KEY + userId + keySuffix;
-        // 2. 取出从 1 号到今天的签到 bit。
+        //4.获取今天是这个月的第几天
         int dayOfMonth = now.getDayOfMonth();
-        // 使用 unsigned(dayOfMonth) 一次性取出本月 1 号到今天的签到位图。
+        //5.获取本月截止今天为止所有的签到记录，返回的是一个十进制的数字
         List<Long> result = stringRedisTemplate.opsForValue()
                 .bitField(key, BitFieldSubCommands.create()
                         .get(BitFieldSubCommands.BitFieldType.unsigned(dayOfMonth))
@@ -155,9 +174,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
         if(num==0||num==null){
             return Result.ok(0);
         }
-        // 3. 统计连续签到天数。
+        //6.循坏遍历
         int count=0;
-        // 从最低位开始检查，最低位表示今天；遇到第一个 0 就说明连续签到中断。
         while (true) {
             //让这个数字与1做与运算，得到数字的最后一个bit位，判断这个bit是否为0
             if((num&1)==0) {
@@ -174,9 +192,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements IU
 
     }
 
-    // 根据手机号创建新用户
     private User createUserWithPhone(String phone) {
-        // 首次登录自动注册，只保存手机号和随机昵称。
         User user = new User();
         user.setPhone(phone);
         user.setNickName(SystemConstants.USER_NICK_NAME_PREFIX +RandomUtil.randomString(10));
